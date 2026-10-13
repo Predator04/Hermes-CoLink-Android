@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CoLink</string>
+    <color name="colink_accent">#4FC3F7</color>
+    <color name="colink_bg">#0A0A0A</color>
+</resources>
