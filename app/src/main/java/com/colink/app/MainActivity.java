@@ -43,10 +43,10 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         buildLogin();
-        checkForUpdate();
+        checkForUpdate(false);
     }
 
-    private void checkForUpdate() {
+    private void checkForUpdate(boolean manual) {
         new Thread(() -> {
             try {
                 java.net.URL u = new java.net.URL("https://api.github.com/repos/Predator04/Hermes-CoLink-Android/releases/latest");
@@ -73,8 +73,14 @@ public class MainActivity extends Activity {
                 if (!tag.isEmpty() && apkUrl != null && isNewer(tag, BuildConfig.VERSION_NAME)) {
                     java.io.File apk = downloadApk(apkUrl, tag);
                     ui.post(() -> showUpdateDialog(tag, apk));
+                } else if (manual) {
+                    ui.post(() -> android.widget.Toast.makeText(this,
+                            "Up to date (v" + BuildConfig.VERSION_NAME + ")", android.widget.Toast.LENGTH_SHORT).show());
                 }
-            } catch (Exception ignored) { }
+            } catch (Exception e) {
+                if (manual) ui.post(() -> android.widget.Toast.makeText(this,
+                        "Check failed: " + Err.friendly(e), android.widget.Toast.LENGTH_LONG).show());
+            }
         }).start();
     }
 
@@ -165,6 +171,11 @@ public class MainActivity extends Activity {
         connect.setText("Connect");
         connect.setOnClickListener(v -> doLogin());
         root.addView(connect);
+
+        Button checkUpdates = new Button(this);
+        checkUpdates.setText("Check for updates");
+        checkUpdates.setOnClickListener(v -> checkForUpdate(true));
+        root.addView(checkUpdates);
 
         renderProfiles(root);
 
