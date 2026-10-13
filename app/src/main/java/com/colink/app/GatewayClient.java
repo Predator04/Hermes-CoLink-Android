@@ -17,17 +17,20 @@ import okhttp3.WebSocketListener;
 public class GatewayClient {
     public interface Callback { void onResult(JSONObject result); void onError(String msg); }
     public interface EventListener { void onEvent(String type, JSONObject payload); }
+    public interface RequestListener { void onRequest(String id, String method, JSONObject params); }
 
     private final OkHttpClient http = new OkHttpClient();
     private final String baseUrl;
     private WebSocket ws;
     private final Map<String, Callback> pending = new HashMap<>();
     private EventListener eventListener;
+    private RequestListener requestListener;
     private int nextId = 0;
 
     public GatewayClient(String baseUrl) { this.baseUrl = baseUrl; }
 
     public void setEventListener(EventListener l) { this.eventListener = l; }
+    public void setRequestListener(RequestListener l) { this.requestListener = l; }
 
     /** Fetch a single-use WS ticket, connect, and block until the socket opens. */
     public void connectBlocking() throws Exception {
@@ -70,15 +73,12 @@ public class GatewayClient {
                         eventListener.onEvent(p.optString("type"), p.optJSONObject("payload"));
                     }
                 } else if (f.has("method") && f.has("id")) {
-                    // server→client request (clarify/approval/…) — this client can't answer it.
-                    JSONObject reply = new JSONObject();
-                    reply.put("jsonrpc", "2.0");
-                    reply.put("id", f.optString("id"));
-                    JSONObject err = new JSONObject();
-                    err.put("code", -32601);
-                    err.put("message", "not supported");
-                    reply.put("error", err);
-                    ws.send(reply.toString());
+                    // server→client request (clarify/approval/sudo/…) — surface to the listener.
+                    if (requestListener != null) {
+                        requestListener.onRequest(f.optString("id"), f.optString("method"), f.optJSONObject("params"));
+                    } else {
+                        respondError(f.optString("id"), "not supported");
+                    }
                 }
             } catch (Exception ignored) { }
         }
@@ -112,6 +112,29 @@ public class GatewayClient {
         if (!latch.await(30, TimeUnit.SECONDS)) throw new Exception("request timeout: " + method);
         if (err[0] != null) throw err[0];
         return result[0];
+    }
+
+    public void respond(String id, JSONObject result) {
+        try {
+            JSONObject f = new JSONObject();
+            f.put("jsonrpc", "2.0");
+            f.put("id", id);
+            f.put("result", result);
+            ws.send(f.toString());
+        } catch (Exception ignored) { }
+    }
+
+    public void respondError(String id, String msg) {
+        try {
+            JSONObject f = new JSONObject();
+            f.put("jsonrpc", "2.0");
+            f.put("id", id);
+            JSONObject err = new JSONObject();
+            err.put("code", -32601);
+            err.put("message", msg);
+            f.put("error", err);
+            ws.send(f.toString());
+        } catch (Exception ignored) { }
     }
 
     public void close() { if (ws != null) ws.close(1000, "bye"); }

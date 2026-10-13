@@ -1,6 +1,7 @@
 package com.colink.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -148,7 +149,9 @@ public class ChatActivity extends Activity {
                 if (gw == null) {
                     gw = new GatewayClient(baseUrl);
                     gw.setEventListener(this::onEvent);
+                    gw.setRequestListener(this::onRequest);
                     gw.connectBlocking();
+                    Gw.instance = gw;
                 }
                 if (runtimeSessionId == null) {
                     JSONObject r = gw.requestSync("session.resume", new JSONObject().put("session_id", sessionId));
@@ -182,6 +185,16 @@ public class ChatActivity extends Activity {
         } else if ("message.complete".equals(type)) {
             ui.post(() -> { streaming = false; streamingBubble = null; streamingText.setLength(0); });
         }
+    }
+
+    private void onRequest(String id, String method, JSONObject params) {
+        ui.post(() -> {
+            Intent i = new Intent(this, CallActivity.class);
+            i.putExtra("req_id", id);
+            i.putExtra("method", method);
+            i.putExtra("params", params == null ? "" : params.toString());
+            startActivity(i);
+        });
     }
 
     @Override
