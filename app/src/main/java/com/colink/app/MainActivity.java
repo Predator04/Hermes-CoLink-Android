@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
                 List<Session> list = parseSessions(sessions);
                 ui.post(() -> showSessions(url, list));
             } catch (Exception e) {
-                ui.post(() -> status.setText("Error: " + e.getMessage()));
+                ui.post(() -> status.setText(Err.friendly(e)));
             }
         }).start();
     }

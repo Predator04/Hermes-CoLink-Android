@@ -56,7 +56,7 @@ public class CoLinkService extends Service {
                     dropped.await(); // hold until the WS drops
                     update("Connection lost — reconnecting…");
                 } catch (Exception e) {
-                    update("Reconnecting… (" + e.getMessage() + ")");
+                    update("Reconnecting… (" + Err.friendly(e) + ")");
                 }
                 try { Thread.sleep(5000); } catch (InterruptedException e) { return; }
             }

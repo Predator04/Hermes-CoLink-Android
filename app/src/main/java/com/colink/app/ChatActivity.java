@@ -98,7 +98,7 @@ public class ChatActivity extends Activity {
             } catch (Exception e) {
                 ui.post(() -> {
                     messageList.removeAllViews();
-                    addBubble("Error: " + e.getMessage(), false);
+                    addBubble(Err.friendly(e), false);
                 });
             }
         }).start();
@@ -169,8 +169,8 @@ public class ChatActivity extends Activity {
                 // assistant text streams in via onEvent → message.delta
             } catch (Exception e) {
                 ui.post(() -> {
-                    if (streaming) { streamingBubble.setText("Error: " + e.getMessage()); streaming = false; }
-                    else addBubble("Error: " + e.getMessage(), false);
+                    if (streaming) { streamingBubble.setText(Err.friendly(e)); streaming = false; }
+                    else addBubble(Err.friendly(e), false);
                 });
             }
         }).start();
