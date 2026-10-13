@@ -3,6 +3,7 @@ package com.colink.app;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -42,6 +43,50 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         buildLogin();
+        checkForUpdate();
+    }
+
+    private void checkForUpdate() {
+        new Thread(() -> {
+            try {
+                java.net.URL u = new java.net.URL("https://api.github.com/repos/Predator04/Hermes-CoLink-Android/releases/latest");
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) u.openConnection();
+                c.setRequestProperty("User-Agent", "CoLink");
+                c.setConnectTimeout(6000);
+                c.setReadTimeout(6000);
+                java.io.InputStream in = c.getInputStream();
+                String json = new java.util.Scanner(in, "UTF-8").useDelimiter("\\A").next();
+                in.close();
+                org.json.JSONObject o = new org.json.JSONObject(json);
+                String tag = o.optString("tag_name", "");
+                String url = o.optString("html_url", "");
+                if (!tag.isEmpty() && isNewer(tag, BuildConfig.VERSION_NAME)) {
+                    ui.post(() -> showUpdateDialog(tag, url));
+                }
+            } catch (Exception ignored) { }
+        }).start();
+    }
+
+    private boolean isNewer(String tag, String current) {
+        try {
+            String[] a = tag.replaceFirst("^v", "").split("\\.");
+            String[] b = current.split("\\.");
+            for (int i = 0; i < Math.max(a.length, b.length); i++) {
+                int x = i < a.length ? Integer.parseInt(a[i].trim()) : 0;
+                int y = i < b.length ? Integer.parseInt(b[i].trim()) : 0;
+                if (x != y) return x > y;
+            }
+            return false;
+        } catch (Exception e) { return false; }
+    }
+
+    private void showUpdateDialog(String tag, String url) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Update available: " + tag)
+                .setMessage("A newer CoLink is on GitHub. Open the release to download it?")
+                .setPositiveButton("Open", (d, w) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))))
+                .setNegativeButton("Later", null)
+                .show();
     }
 
     private void buildLogin() {
