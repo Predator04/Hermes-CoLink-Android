@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     private EditText urlField, userField, passField;
     private TextView status;
     private final Handler ui = new Handler(Looper.getMainLooper());
+    private android.content.SharedPreferences prefs;
 
     private static class Session {
         final String id, title, model;
@@ -36,6 +37,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        prefs = getSharedPreferences("colink", MODE_PRIVATE);
         buildLogin();
     }
 
@@ -59,11 +61,12 @@ public class MainActivity extends Activity {
 
         urlField = new EditText(this);
         urlField.setHint("Dashboard URL");
-        urlField.setText("http://192.168.1.8:9119");
+        urlField.setText(prefs.getString("url", "http://192.168.1.8:9119"));
         root.addView(urlField);
 
         userField = new EditText(this);
         userField.setHint("Username");
+        userField.setText(prefs.getString("username", ""));
         root.addView(userField);
 
         passField = new EditText(this);
@@ -96,6 +99,7 @@ public class MainActivity extends Activity {
                     ui.post(() -> status.setText("Login failed — check URL + credentials"));
                     return;
                 }
+                prefs.edit().putString("url", url).putString("username", user).apply();
                 String sessions = c.getSessions();
                 List<Session> list = parseSessions(sessions);
                 ui.post(() -> showSessions(url, list));
