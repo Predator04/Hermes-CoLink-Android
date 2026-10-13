@@ -45,6 +45,12 @@
             android:exported="false"
             android:theme="@style/Theme.CoLink" />
 
+        <!-- Model picker -->
+        <activity
+            android:name=".ModelActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CoLink" />
+
         <!-- Persistent WS foreground service (background agent-call) -->
         <service
             android:name=".CoLinkService"

@@ -69,6 +69,14 @@ public class DashboardClient {
         return readResponse(c);
     }
 
+    /** POST with a JSON body, returning the raw response. */
+    public String post(String path, String jsonBody) throws Exception {
+        HttpURLConnection c = open("POST", path);
+        c.setRequestProperty("Content-Type", "application/json");
+        writeBody(c, jsonBody);
+        return readResponse(c);
+    }
+
     private boolean hasSessionCookie() {
         CookieManager cm = (CookieManager) CookieHandler.getDefault();
         if (cm == null || cm.getCookieStore() == null) return false;

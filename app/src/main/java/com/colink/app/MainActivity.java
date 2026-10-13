@@ -166,6 +166,8 @@ public class MainActivity extends Activity {
         connect.setOnClickListener(v -> doLogin());
         root.addView(connect);
 
+        renderProfiles(root);
+
         status = new TextView(this);
         status.setTextColor(Color.LTGRAY);
         status.setPadding(0, 24, 0, 0);
@@ -199,6 +201,7 @@ public class MainActivity extends Activity {
                     return;
                 }
                 prefs.edit().putString("url", url).putString("username", user).apply();
+                saveProfile(url, user, pass);
                 startService(new Intent(this, CoLinkService.class)
                         .putExtra("url", url)
                         .putExtra("username", user)
@@ -210,6 +213,55 @@ public class MainActivity extends Activity {
                 ui.post(() -> status.setText(Err.friendly(e)));
             }
         }).start();
+    }
+
+    private org.json.JSONArray loadProfilesArray() {
+        try {
+            return new org.json.JSONArray(prefs.getString("profiles", "[]"));
+        } catch (Exception e) { return new org.json.JSONArray(); }
+    }
+
+    private void saveProfile(String url, String user, String pass) {
+        try {
+            org.json.JSONArray arr = loadProfilesArray();
+            org.json.JSONArray out = new org.json.JSONArray();
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject p = arr.optJSONObject(i);
+                if (p != null && !url.equals(p.optString("url"))) out.put(p);
+            }
+            org.json.JSONObject p = new org.json.JSONObject();
+            p.put("url", url);
+            p.put("username", user);
+            p.put("password", pass);
+            out.put(p);
+            prefs.edit().putString("profiles", out.toString()).apply();
+        } catch (Exception ignored) { }
+    }
+
+    private void renderProfiles(LinearLayout root) {
+        org.json.JSONArray arr = loadProfilesArray();
+        if (arr.length() == 0) return;
+        TextView lbl = new TextView(this);
+        lbl.setText("Saved dashboards");
+        lbl.setTextColor(Color.GRAY);
+        lbl.setPadding(0, 24, 0, 8);
+        root.addView(lbl);
+        for (int i = 0; i < arr.length(); i++) {
+            org.json.JSONObject p = arr.optJSONObject(i);
+            if (p == null) continue;
+            String u = p.optString("url");
+            String n = p.optString("username");
+            String w = p.optString("password");
+            Button btn = new Button(this);
+            btn.setText(n + " @ " + u.replaceFirst("https?://", ""));
+            btn.setOnClickListener(v -> {
+                urlField.setText(u);
+                userField.setText(n);
+                passField.setText(w);
+                doLogin();
+            });
+            root.addView(btn);
+        }
     }
 
     private List<Session> parseSessions(String json) throws Exception {
@@ -245,6 +297,10 @@ public class MainActivity extends Activity {
         kanban.setText("📋 Kanban");
         kanban.setOnClickListener(v -> startActivity(new Intent(this, KanbanActivity.class).putExtra("url", url)));
         headerRow.addView(kanban);
+        Button model = new Button(this);
+        model.setText("⚙️ Model");
+        model.setOnClickListener(v -> startActivity(new Intent(this, ModelActivity.class).putExtra("url", url)));
+        headerRow.addView(model);
         root.addView(headerRow);
 
         if (sessions.isEmpty()) {
