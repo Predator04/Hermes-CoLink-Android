@@ -27,6 +27,7 @@ public class GatewayClient {
     private EventListener eventListener;
     private RequestListener requestListener;
     private DisconnectListener disconnectListener;
+    private volatile boolean connected = false;
     private int nextId = 0;
 
     public GatewayClient(String baseUrl) { this.baseUrl = baseUrl; }
@@ -34,6 +35,7 @@ public class GatewayClient {
     public void setEventListener(EventListener l) { this.eventListener = l; }
     public void setRequestListener(RequestListener l) { this.requestListener = l; }
     public void setDisconnectListener(DisconnectListener l) { this.disconnectListener = l; }
+    public boolean isConnected() { return connected; }
 
     /** Fetch a single-use WS ticket, connect, and block until the socket opens. */
     public void connectBlocking() throws Exception {
@@ -44,11 +46,13 @@ public class GatewayClient {
         Request req = new Request.Builder().url(wsUrl).build();
         final boolean[] opened = {false};
         ws = http.newWebSocket(req, new WebSocketListener() {
-            @Override public void onOpen(WebSocket ws, Response r) { opened[0] = true; latch.countDown(); }
+            @Override public void onOpen(WebSocket ws, Response r) { opened[0] = true; connected = true; latch.countDown(); }
             @Override public void onClosed(WebSocket ws, int code, String reason) {
+                connected = false;
                 if (disconnectListener != null) disconnectListener.onDisconnected();
             }
             @Override public void onFailure(WebSocket ws, Throwable t, Response r) {
+                connected = false;
                 if (!opened[0]) { err[0] = new Exception("WS failed: " + t.getMessage()); latch.countDown(); }
                 else if (disconnectListener != null) disconnectListener.onDisconnected();
             }

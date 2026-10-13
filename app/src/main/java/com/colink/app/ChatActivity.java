@@ -160,9 +160,18 @@ public class ChatActivity extends Activity {
                     }
                     gw.setEventListener(this::onEvent);
                 }
+                int waits = 0;
+                while (!gw.isConnected() && waits < 5) {
+                    if (waits == 0) ui.post(() -> addBubble("Reconnecting…", false));
+                    Thread.sleep(3000);
+                    waits++;
+                }
+                if (!gw.isConnected()) {
+                    ui.post(() -> addBubble("Still reconnecting — try again in a moment", false));
+                    return;
+                }
                 if (runtimeSessionId == null) {
-                    JSONObject r = gw.requestSync("session.resume", new JSONObject().put("session_id", sessionId));
-                    runtimeSessionId = r.optString("session_id", sessionId);
+                    runtimeSessionId = resolveSession();
                 }
                 JSONObject p = new JSONObject().put("session_id", runtimeSessionId).put("text", text);
                 gw.requestSync("prompt.submit", p);
@@ -191,6 +200,20 @@ public class ChatActivity extends Activity {
             });
         } else if ("message.complete".equals(type)) {
             ui.post(() -> { streaming = false; streamingBubble = null; streamingText.setLength(0); });
+        }
+    }
+
+    private String resolveSession() throws Exception {
+        try {
+            return gw.requestSync("session.resume", new JSONObject().put("session_id", sessionId))
+                    .optString("session_id", sessionId);
+        } catch (Exception e1) {
+            try {
+                return gw.requestSync("session.activate", new JSONObject().put("session_id", sessionId))
+                        .optString("session_id", sessionId);
+            } catch (Exception e2) {
+                throw new Exception("This session can't be opened — it may have been deleted");
+            }
         }
     }
 

@@ -90,7 +90,19 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
+    private boolean isOnline() {
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            android.net.NetworkInfo ni = cm.getActiveNetworkInfo();
+            return ni != null && ni.isConnected();
+        } catch (Exception e) { return true; }
+    }
+
     private void doLogin() {
+        if (!isOnline()) {
+            status.setText("No internet connection");
+            return;
+        }
         String url = urlField.getText().toString().trim();
         String user = userField.getText().toString().trim();
         String pass = passField.getText().toString();
