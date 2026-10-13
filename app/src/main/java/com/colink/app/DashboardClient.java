@@ -51,6 +51,17 @@ public class DashboardClient {
         return get("/api/auth/me");
     }
 
+    /** POST /api/auth/ws-ticket — returns the single-use ticket for a WS upgrade. */
+    public String getWsTicket() throws Exception {
+        HttpURLConnection c = open("POST", "/api/auth/ws-ticket");
+        c.setRequestProperty("Content-Type", "application/json");
+        writeBody(c, "{}");
+        int code = c.getResponseCode();
+        String resp = readResponse(c);
+        if (code != 200) throw new Exception("ws-ticket failed: HTTP " + code);
+        return new org.json.JSONObject(resp).getString("ticket");
+    }
+
     public String get(String path) throws Exception {
         HttpURLConnection c = open("GET", path);
         return readResponse(c);

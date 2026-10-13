@@ -7,10 +7,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -19,26 +19,35 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Read-only message view for one session (user/assistant bubbles). */
+/** Chat screen: message history + send + live streaming. */
 public class ChatActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
+    private LinearLayout messageList;
+    private ScrollView scroll;
+    private EditText input;
+    private GatewayClient gw;
+    private String runtimeSessionId;
+    private String baseUrl, sessionId;
+    private TextView streamingBubble;
+    private final StringBuilder streamingText = new StringBuilder();
+    private boolean streaming = false;
 
     private static class Msg {
         final boolean fromUser;
         final String text;
-        Msg(boolean fromUser, String text) { this.fromUser = fromUser; this.text = text; }
+        Msg(boolean f, String t) { fromUser = f; text = t; }
     }
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        String url = getIntent().getStringExtra("url");
-        String sid = getIntent().getStringExtra("session_id");
+        baseUrl = getIntent().getStringExtra("url");
+        sessionId = getIntent().getStringExtra("session_id");
         String title = getIntent().getStringExtra("title");
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(24, 48, 24, 24);
+        root.setPadding(16, 48, 16, 8);
 
         TextView header = new TextView(this);
         header.setText(title);
@@ -47,25 +56,44 @@ public class ChatActivity extends Activity {
         header.setGravity(Gravity.CENTER);
         root.addView(header);
 
-        ListView list = new ListView(this);
-        list.setDivider(null);
-        list.setPadding(0, 16, 0, 0);
-        root.addView(list);
+        scroll = new ScrollView(this);
+        messageList = new LinearLayout(this);
+        messageList.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(messageList);
+        root.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        LinearLayout inputRow = new LinearLayout(this);
+        inputRow.setOrientation(LinearLayout.HORIZONTAL);
+        input = new EditText(this);
+        input.setHint("Message…");
+        input.setTextColor(Color.WHITE);
+        inputRow.addView(input, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        Button send = new Button(this);
+        send.setText("Send");
+        send.setOnClickListener(v -> onSend());
+        inputRow.addView(send);
+        root.addView(inputRow);
 
         setContentView(root);
+        loadHistory();
+    }
 
+    private void loadHistory() {
+        addBubble("Loading…", false);
         new Thread(() -> {
             try {
-                DashboardClient c = new DashboardClient(url);
-                String json = c.get("/api/sessions/" + sid + "/messages?limit=200&order=latest");
+                DashboardClient c = new DashboardClient(baseUrl);
+                String json = c.get("/api/sessions/" + sessionId + "/messages?limit=200&order=latest");
                 List<Msg> msgs = parseMessages(json);
-                ui.post(() -> list.setAdapter(new MsgAdapter(msgs)));
+                ui.post(() -> {
+                    messageList.removeAllViews();
+                    for (Msg m : msgs) addBubble(m.text, m.fromUser);
+                });
             } catch (Exception e) {
                 ui.post(() -> {
-                    TextView err = new TextView(ChatActivity.this);
-                    err.setText("Error: " + e.getMessage());
-                    err.setTextColor(Color.LTGRAY);
-                    root.addView(err);
+                    messageList.removeAllViews();
+                    addBubble("Error: " + e.getMessage(), false);
                 });
             }
         }).start();
@@ -73,8 +101,7 @@ public class ChatActivity extends Activity {
 
     private List<Msg> parseMessages(String json) throws Exception {
         List<Msg> out = new ArrayList<>();
-        JSONObject obj = new JSONObject(json);
-        JSONArray arr = obj.optJSONArray("messages");
+        JSONArray arr = new JSONObject(json).optJSONArray("messages");
         if (arr != null) {
             for (int i = arr.length() - 1; i >= 0; i--) { // latest-first → chronological
                 JSONObject m = arr.optJSONObject(i);
@@ -84,41 +111,82 @@ public class ChatActivity extends Activity {
                 if (content == null || content.trim().isEmpty()) continue;
                 if (role.equals("user")) out.add(new Msg(true, content));
                 else if (role.equals("assistant")) out.add(new Msg(false, content));
-                // skip tool/system
             }
         }
         return out;
     }
 
-    private class MsgAdapter extends BaseAdapter {
-        private final List<Msg> msgs;
-        MsgAdapter(List<Msg> msgs) { this.msgs = msgs; }
+    private TextView addBubble(String text, boolean fromUser) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(15);
+        tv.setTextColor(Color.WHITE);
+        tv.setPadding(24, 14, 24, 14);
+        tv.setMaxWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.82));
+        tv.setBackgroundColor(fromUser ? Color.rgb(47, 100, 160) : Color.rgb(38, 38, 42));
 
-        @Override public int getCount() { return msgs.size(); }
-        @Override public Object getItem(int i) { return msgs.get(i); }
-        @Override public long getItemId(int i) { return i; }
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setGravity(fromUser ? Gravity.END : Gravity.START);
+        wrap.setPadding(8, 6, 8, 6);
+        wrap.addView(tv);
+        messageList.addView(wrap);
+        scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
+        return tv;
+    }
 
-        @Override
-        public View getView(int i, View convert, ViewGroup parent) {
-            Msg m = msgs.get(i);
-            TextView tv = new TextView(ChatActivity.this);
-            tv.setText(m.text);
-            tv.setTextSize(15);
-            tv.setTextColor(Color.WHITE);
-            tv.setPadding(24, 14, 24, 14);
-            tv.setMaxWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.8));
+    private void onSend() {
+        String text = input.getText().toString().trim();
+        if (text.isEmpty()) return;
+        input.setText("");
+        addBubble(text, true);
+        streamReply(text);
+    }
 
-            LinearLayout wrap = new LinearLayout(ChatActivity.this);
-            wrap.setGravity(m.fromUser ? Gravity.END : Gravity.START);
-            wrap.setPadding(8, 6, 8, 6);
-
-            if (m.fromUser) {
-                tv.setBackgroundColor(Color.rgb(47, 100, 160));
-            } else {
-                tv.setBackgroundColor(Color.rgb(38, 38, 42));
+    private void streamReply(String text) {
+        new Thread(() -> {
+            try {
+                if (gw == null) {
+                    gw = new GatewayClient(baseUrl);
+                    gw.setEventListener(this::onEvent);
+                    gw.connectBlocking();
+                }
+                if (runtimeSessionId == null) {
+                    JSONObject r = gw.requestSync("session.resume", new JSONObject().put("session_id", sessionId));
+                    runtimeSessionId = r.optString("session_id", sessionId);
+                }
+                JSONObject p = new JSONObject().put("session_id", runtimeSessionId).put("text", text);
+                gw.requestSync("prompt.submit", p);
+                // assistant text streams in via onEvent → message.delta
+            } catch (Exception e) {
+                ui.post(() -> {
+                    if (streaming) { streamingBubble.setText("Error: " + e.getMessage()); streaming = false; }
+                    else addBubble("Error: " + e.getMessage(), false);
+                });
             }
-            wrap.addView(tv);
-            return wrap;
+        }).start();
+    }
+
+    private void onEvent(String type, JSONObject payload) {
+        if ("message.delta".equals(type)) {
+            String t = payload == null ? "" : payload.optString("text", "");
+            if (t.isEmpty()) return;
+            ui.post(() -> {
+                if (!streaming) {
+                    streamingBubble = addBubble("", false);
+                    streamingText.setLength(0);
+                    streaming = true;
+                }
+                streamingText.append(t);
+                streamingBubble.setText(streamingText.toString());
+            });
+        } else if ("message.complete".equals(type)) {
+            ui.post(() -> { streaming = false; streamingBubble = null; streamingText.setLength(0); });
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (gw != null) gw.close();
     }
 }
