@@ -38,6 +38,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         prefs = getSharedPreferences("colink", MODE_PRIVATE);
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
         buildLogin();
     }
 
@@ -100,6 +103,10 @@ public class MainActivity extends Activity {
                     return;
                 }
                 prefs.edit().putString("url", url).putString("username", user).apply();
+                startService(new Intent(this, CoLinkService.class)
+                        .putExtra("url", url)
+                        .putExtra("username", user)
+                        .putExtra("password", pass));
                 String sessions = c.getSessions();
                 List<Session> list = parseSessions(sessions);
                 ui.post(() -> showSessions(url, list));

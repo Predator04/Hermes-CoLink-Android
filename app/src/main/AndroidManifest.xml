@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:allowBackup="true"
@@ -35,6 +37,16 @@
             android:name=".ChatActivity"
             android:exported="false"
             android:theme="@style/Theme.CoLink" />
+
+        <!-- Persistent WS foreground service (background agent-call) -->
+        <service
+            android:name=".CoLinkService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent connection to personal Hermes agent for incoming calls" />
+        </service>
 
     </application>
 </manifest>

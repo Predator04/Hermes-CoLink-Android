@@ -147,11 +147,14 @@ public class ChatActivity extends Activity {
         new Thread(() -> {
             try {
                 if (gw == null) {
-                    gw = new GatewayClient(baseUrl);
+                    gw = Gw.instance;
+                    if (gw == null) {
+                        gw = new GatewayClient(baseUrl);
+                        gw.setRequestListener(this::onRequest);
+                        gw.connectBlocking();
+                        Gw.instance = gw;
+                    }
                     gw.setEventListener(this::onEvent);
-                    gw.setRequestListener(this::onRequest);
-                    gw.connectBlocking();
-                    Gw.instance = gw;
                 }
                 if (runtimeSessionId == null) {
                     JSONObject r = gw.requestSync("session.resume", new JSONObject().put("session_id", sessionId));
