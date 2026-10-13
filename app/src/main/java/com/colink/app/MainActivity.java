@@ -43,7 +43,6 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         buildLogin();
-        checkForUpdate(false);
     }
 
     private void checkForUpdate(boolean manual) {
