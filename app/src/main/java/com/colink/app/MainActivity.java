@@ -73,8 +73,7 @@ public class MainActivity extends Activity {
                     java.io.File apk = downloadApk(apkUrl, tag);
                     ui.post(() -> showUpdateDialog(tag, apk));
                 } else if (manual) {
-                    ui.post(() -> android.widget.Toast.makeText(this,
-                            "Up to date (v" + BuildConfig.VERSION_NAME + ")", android.widget.Toast.LENGTH_SHORT).show());
+                    ui.post(() -> showUpToDate(BuildConfig.VERSION_NAME));
                 }
             } catch (Exception e) {
                 if (manual) ui.post(() -> android.widget.Toast.makeText(this,
@@ -120,6 +119,20 @@ public class MainActivity extends Activity {
                 .setMessage("Downloaded. Install now?")
                 .setPositiveButton("Install", (d, w) -> installApk(apk))
                 .setNegativeButton("Later", null)
+                .show();
+    }
+
+    private void showUpToDate(String version) {
+        TextView tv = new TextView(this);
+        tv.setText("You are on the latest version\nv" + version);
+        tv.setTextSize(22);
+        tv.setTextColor(Color.WHITE);
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(0, 32, 0, 32);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("✓ Up to date")
+                .setView(tv)
+                .setPositiveButton("OK", null)
                 .show();
     }
 
