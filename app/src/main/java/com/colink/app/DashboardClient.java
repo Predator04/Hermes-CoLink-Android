@@ -27,16 +27,18 @@ public class DashboardClient {
         CookieHandler.setDefault(cm);
     }
 
-    /** POST /login with username+password; returns true if a session cookie was set. */
+    /** POST /auth/password-login with JSON {provider, username, password}; sets session cookie. */
     public boolean login(String username, String password) throws Exception {
-        HttpURLConnection c = open("POST", "/login");
-        c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        String body = "username=" + URLEncoder.encode(username, "UTF-8")
-                + "&password=" + URLEncoder.encode(password, "UTF-8");
-        writeBody(c, body);
+        HttpURLConnection c = open("POST", "/auth/password-login");
+        c.setRequestProperty("Content-Type", "application/json");
+        org.json.JSONObject body = new org.json.JSONObject();
+        body.put("provider", "basic");
+        body.put("username", username);
+        body.put("password", password);
+        writeBody(c, body.toString());
         int code = c.getResponseCode();
-        // Follow redirects are disabled; a 302/303 to the dashboard root means success.
-        return (code == 200 || code == 302 || code == 303) && hasSessionCookie();
+        String resp = readResponse(c);
+        return (code == 200) && resp.contains("\"ok\"") && hasSessionCookie();
     }
 
     /** GET /api/sessions — returns the raw JSON body. */
