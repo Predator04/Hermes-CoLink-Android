@@ -39,19 +39,26 @@ public class CoLinkService extends Service {
 
     private void connect(String url, String user, String pass) {
         new Thread(() -> {
-            try {
-                DashboardClient c = new DashboardClient(url);
-                if (!c.login(user, pass)) {
-                    update("Login failed — check credentials");
-                    return;
+            while (true) {
+                try {
+                    DashboardClient c = new DashboardClient(url);
+                    if (!c.login(user, pass)) {
+                        update("Login failed — check credentials");
+                        return;
+                    }
+                    gw = new GatewayClient(url);
+                    Gw.instance = gw;
+                    gw.setRequestListener(this::onRequest);
+                    final java.util.concurrent.CountDownLatch dropped = new java.util.concurrent.CountDownLatch(1);
+                    gw.setDisconnectListener(dropped::countDown);
+                    gw.connectBlocking();
+                    update("Connected — agent can reach you");
+                    dropped.await(); // hold until the WS drops
+                    update("Connection lost — reconnecting…");
+                } catch (Exception e) {
+                    update("Reconnecting… (" + e.getMessage() + ")");
                 }
-                gw = new GatewayClient(url);
-                Gw.instance = gw;
-                gw.setRequestListener(this::onRequest);
-                gw.connectBlocking();
-                update("Connected — agent can reach you");
-            } catch (Exception e) {
-                update("Error: " + e.getMessage());
+                try { Thread.sleep(5000); } catch (InterruptedException e) { return; }
             }
         }).start();
     }

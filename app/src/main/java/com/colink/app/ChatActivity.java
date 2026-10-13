@@ -70,6 +70,10 @@ public class ChatActivity extends Activity {
         input.setHint("Message…");
         input.setTextColor(Color.WHITE);
         inputRow.addView(input, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        Button mic = new Button(this);
+        mic.setText("🎤");
+        mic.setOnClickListener(v -> startVoice());
+        inputRow.addView(mic);
         Button send = new Button(this);
         send.setText("Send");
         send.setOnClickListener(v -> onSend());
@@ -198,6 +202,30 @@ public class ChatActivity extends Activity {
             i.putExtra("params", params == null ? "" : params.toString());
             startActivity(i);
         });
+    }
+
+    private void startVoice() {
+        try {
+            Intent i = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            startActivityForResult(i, 1);
+        } catch (Exception e) {
+            addBubble("Voice not available: " + e.getMessage(), false);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == 1 && res == RESULT_OK && data != null) {
+            ArrayList<String> r = data.getStringArrayListExtra(
+                    android.speech.RecognizerIntent.EXTRA_RESULTS);
+            if (r != null && !r.isEmpty()) {
+                input.setText(r.get(0));
+                onSend();
+            }
+        }
     }
 
     @Override

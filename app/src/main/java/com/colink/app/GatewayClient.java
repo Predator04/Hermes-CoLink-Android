@@ -18,6 +18,7 @@ public class GatewayClient {
     public interface Callback { void onResult(JSONObject result); void onError(String msg); }
     public interface EventListener { void onEvent(String type, JSONObject payload); }
     public interface RequestListener { void onRequest(String id, String method, JSONObject params); }
+    public interface DisconnectListener { void onDisconnected(); }
 
     private final OkHttpClient http = new OkHttpClient();
     private final String baseUrl;
@@ -25,12 +26,14 @@ public class GatewayClient {
     private final Map<String, Callback> pending = new HashMap<>();
     private EventListener eventListener;
     private RequestListener requestListener;
+    private DisconnectListener disconnectListener;
     private int nextId = 0;
 
     public GatewayClient(String baseUrl) { this.baseUrl = baseUrl; }
 
     public void setEventListener(EventListener l) { this.eventListener = l; }
     public void setRequestListener(RequestListener l) { this.requestListener = l; }
+    public void setDisconnectListener(DisconnectListener l) { this.disconnectListener = l; }
 
     /** Fetch a single-use WS ticket, connect, and block until the socket opens. */
     public void connectBlocking() throws Exception {
@@ -39,11 +42,15 @@ public class GatewayClient {
         final CountDownLatch latch = new CountDownLatch(1);
         final Exception[] err = new Exception[1];
         Request req = new Request.Builder().url(wsUrl).build();
+        final boolean[] opened = {false};
         ws = http.newWebSocket(req, new WebSocketListener() {
-            @Override public void onOpen(WebSocket ws, Response r) { latch.countDown(); }
+            @Override public void onOpen(WebSocket ws, Response r) { opened[0] = true; latch.countDown(); }
+            @Override public void onClosed(WebSocket ws, int code, String reason) {
+                if (disconnectListener != null) disconnectListener.onDisconnected();
+            }
             @Override public void onFailure(WebSocket ws, Throwable t, Response r) {
-                err[0] = new Exception("WS failed: " + t.getMessage());
-                latch.countDown();
+                if (!opened[0]) { err[0] = new Exception("WS failed: " + t.getMessage()); latch.countDown(); }
+                else if (disconnectListener != null) disconnectListener.onDisconnected();
             }
             @Override public void onMessage(WebSocket ws, String text) { handleFrame(text); }
         });
