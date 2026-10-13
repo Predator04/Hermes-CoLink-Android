@@ -52,16 +52,27 @@ public class MainActivity extends Activity {
                 java.net.URL u = new java.net.URL("https://api.github.com/repos/Predator04/Hermes-CoLink-Android/releases/latest");
                 java.net.HttpURLConnection c = (java.net.HttpURLConnection) u.openConnection();
                 c.setRequestProperty("User-Agent", "CoLink");
-                c.setConnectTimeout(6000);
-                c.setReadTimeout(6000);
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(8000);
                 java.io.InputStream in = c.getInputStream();
                 String json = new java.util.Scanner(in, "UTF-8").useDelimiter("\\A").next();
                 in.close();
                 org.json.JSONObject o = new org.json.JSONObject(json);
                 String tag = o.optString("tag_name", "");
-                String url = o.optString("html_url", "");
-                if (!tag.isEmpty() && isNewer(tag, BuildConfig.VERSION_NAME)) {
-                    ui.post(() -> showUpdateDialog(tag, url));
+                String apkUrl = null;
+                org.json.JSONArray assets = o.optJSONArray("assets");
+                if (assets != null) {
+                    for (int i = 0; i < assets.length(); i++) {
+                        org.json.JSONObject a = assets.optJSONObject(i);
+                        if (a != null && a.optString("name", "").endsWith(".apk")) {
+                            apkUrl = a.optString("browser_download_url");
+                            break;
+                        }
+                    }
+                }
+                if (!tag.isEmpty() && apkUrl != null && isNewer(tag, BuildConfig.VERSION_NAME)) {
+                    java.io.File apk = downloadApk(apkUrl, tag);
+                    ui.post(() -> showUpdateDialog(tag, apk));
                 }
             } catch (Exception ignored) { }
         }).start();
@@ -80,13 +91,41 @@ public class MainActivity extends Activity {
         } catch (Exception e) { return false; }
     }
 
-    private void showUpdateDialog(String tag, String url) {
+    private java.io.File downloadApk(String url, String tag) throws Exception {
+        java.net.URL u = new java.net.URL(url);
+        java.net.HttpURLConnection c = (java.net.HttpURLConnection) u.openConnection();
+        c.setRequestProperty("User-Agent", "CoLink");
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(30000);
+        c.setInstanceFollowRedirects(true);
+        java.io.InputStream in = c.getInputStream();
+        java.io.File out = new java.io.File(getCacheDir(), "colink-" + tag + ".apk");
+        java.io.FileOutputStream fos = new java.io.FileOutputStream(out);
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) fos.write(buf, 0, n);
+        fos.close();
+        in.close();
+        return out;
+    }
+
+    private void showUpdateDialog(String tag, java.io.File apk) {
         new android.app.AlertDialog.Builder(this)
-                .setTitle("Update available: " + tag)
-                .setMessage("A newer CoLink is on GitHub. Open the release to download it?")
-                .setPositiveButton("Open", (d, w) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))))
+                .setTitle("Update " + tag + " ready")
+                .setMessage("Downloaded. Install now?")
+                .setPositiveButton("Install", (d, w) -> installApk(apk))
                 .setNegativeButton("Later", null)
                 .show();
+    }
+
+    private void installApk(java.io.File apk) {
+        android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                this, getPackageName() + ".fileprovider", apk);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(uri, "application/vnd.android.package-archive");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 
     private void buildLogin() {
@@ -102,7 +141,7 @@ public class MainActivity extends Activity {
         root.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Your Hermes agent, on your phone");
+        sub.setText("Your Hermes agent, on your phone\nv" + BuildConfig.VERSION_NAME);
         sub.setTextColor(Color.GRAY);
         sub.setGravity(Gravity.CENTER);
         root.addView(sub);
