@@ -19,12 +19,14 @@ import java.util.List;
 public class DashboardClient {
     private final String baseUrl; // e.g. http://192.168.1.8:9119
 
+    private static final CookieManager COOKIES = new CookieManager();
+    static {
+        COOKIES.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+        CookieHandler.setDefault(COOKIES);
+    }
+
     public DashboardClient(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        // Cookie manager holds the hermes_session_at cookie across requests.
-        CookieManager cm = new CookieManager();
-        cm.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
-        CookieHandler.setDefault(cm);
     }
 
     /** POST /auth/password-login with JSON {provider, username, password}; sets session cookie. */
