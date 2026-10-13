@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Foreground service holding a persistent WS so the agent can "call" in the background. */
@@ -52,6 +53,7 @@ public class CoLinkService extends Service {
                     final java.util.concurrent.CountDownLatch dropped = new java.util.concurrent.CountDownLatch(1);
                     gw.setDisconnectListener(dropped::countDown);
                     gw.connectBlocking();
+                    attachToSession(url); // attach to your main session so background calls fire
                     update("Connected — agent can reach you");
                     dropped.await(); // hold until the WS drops
                     update("Connection lost — reconnecting…");
@@ -61,6 +63,20 @@ public class CoLinkService extends Service {
                 try { Thread.sleep(5000); } catch (InterruptedException e) { return; }
             }
         }).start();
+    }
+
+    private void attachToSession(String url) {
+        try {
+            String json = new DashboardClient(url).getSessions();
+            JSONArray arr = new JSONObject(json).optJSONArray("sessions");
+            for (int i = 0; arr != null && i < arr.length(); i++) {
+                JSONObject s = arr.optJSONObject(i);
+                String src = s.optString("source", "");
+                if ("cron".equals(src) || "tool".equals(src)) continue; // skip automated sessions
+                gw.requestSync("session.resume", new JSONObject().put("session_id", s.optString("id")));
+                return;
+            }
+        } catch (Exception ignored) { }
     }
 
     private void onRequest(String id, String method, JSONObject params) {
