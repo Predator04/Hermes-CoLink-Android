@@ -61,6 +61,15 @@
                 android:value="Persistent connection to personal Hermes agent for incoming calls" />
         </service>
 
+        <!-- FCM push → full-screen agent call -->
+        <service
+            android:name=".CoLinkFirebaseService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- Exposes downloaded APKs to the package installer -->
         <provider
             android:name="androidx.core.content.FileProvider"

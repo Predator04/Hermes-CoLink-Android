@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "420020582656",
+    "project_id": "colink-e2e2b",
+    "storage_bucket": "colink-e2e2b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420020582656:android:18d1796f647d49875e1be5",
+        "android_client_info": {
+          "package_name": "com.colink.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxw17MLy2O8y1V95_POa0hBSrkTsGpCbU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

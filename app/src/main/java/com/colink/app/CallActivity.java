@@ -1,6 +1,7 @@
 package com.colink.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -11,7 +12,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Full-screen "agent call" — fires on a server→client request (clarify/approval/sudo). */
+/** Full-screen "agent call" — fires on a server→client request (clarify/approval/sudo) or an FCM push. */
 public class CallActivity extends Activity {
     private String reqId;
 
@@ -21,6 +22,9 @@ public class CallActivity extends Activity {
         reqId = getIntent().getStringExtra("req_id");
         String method = getIntent().getStringExtra("method");
         String params = getIntent().getStringExtra("params");
+        final String fcmTitle = getIntent().getStringExtra("title");
+        final String fcmBody = getIntent().getStringExtra("body");
+        final boolean fcm = fcmTitle != null && !fcmTitle.isEmpty();
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -28,14 +32,14 @@ public class CallActivity extends Activity {
         root.setPadding(48, 64, 48, 48);
 
         TextView title = new TextView(this);
-        title.setText("📞 Your agent needs you");
+        title.setText(fcm ? ("📞 " + fcmTitle) : "📞 Your agent needs you");
         title.setTextSize(26);
         title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
 
         TextView what = new TextView(this);
-        what.setText(humanize(method));
+        what.setText(fcm ? "" : humanize(method));
         what.setTextSize(15);
         what.setTextColor(Color.rgb(79, 195, 247));
         what.setGravity(Gravity.CENTER);
@@ -43,7 +47,7 @@ public class CallActivity extends Activity {
         root.addView(what);
 
         TextView detail = new TextView(this);
-        detail.setText(readableParams(params));
+        detail.setText(fcm ? (fcmBody == null ? "" : fcmBody) : readableParams(params));
         detail.setTextSize(15);
         detail.setTextColor(Color.LTGRAY);
         detail.setTextIsSelectable(true);
@@ -52,13 +56,23 @@ public class CallActivity extends Activity {
         root.addView(detail);
 
         Button accept = new Button(this);
-        accept.setText("Answer");
-        accept.setOnClickListener(v -> answer(true));
+        accept.setText(fcm ? "Open" : "Answer");
+        accept.setOnClickListener(v -> {
+            if (fcm) {
+                startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                finish();
+            } else {
+                answer(true);
+            }
+        });
         root.addView(accept);
 
         Button decline = new Button(this);
-        decline.setText("Decline");
-        decline.setOnClickListener(v -> answer(false));
+        decline.setText(fcm ? "Dismiss" : "Decline");
+        decline.setOnClickListener(v -> {
+            if (fcm) finish();
+            else answer(false);
+        });
         root.addView(decline);
 
         setContentView(root);
