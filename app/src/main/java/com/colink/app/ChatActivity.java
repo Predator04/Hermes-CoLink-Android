@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.speech.tts.TextToSpeech;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -32,6 +33,9 @@ public class ChatActivity extends Activity {
     private TextView streamingBubble;
     private final StringBuilder streamingText = new StringBuilder();
     private boolean streaming = false;
+    private TextToSpeech tts;
+    private boolean ttsOn = false;
+    private Button ttsButton;
 
     private static class Msg {
         final boolean fromUser;
@@ -50,12 +54,21 @@ public class ChatActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(16, 48, 16, 8);
 
+        LinearLayout headerRow = new LinearLayout(this);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
         TextView header = new TextView(this);
         header.setText(title);
         header.setTextSize(18);
         header.setTextColor(Color.WHITE);
-        header.setGravity(Gravity.CENTER);
-        root.addView(header);
+        headerRow.addView(header, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        ttsButton = new Button(this);
+        ttsButton.setText("🔇");
+        ttsButton.setOnClickListener(v -> {
+            ttsOn = !ttsOn;
+            ttsButton.setText(ttsOn ? "🔊" : "🔇");
+        });
+        headerRow.addView(ttsButton);
+        root.addView(headerRow);
 
         scroll = new ScrollView(this);
         messageList = new LinearLayout(this);
@@ -81,6 +94,7 @@ public class ChatActivity extends Activity {
         root.addView(inputRow);
 
         setContentView(root);
+        tts = new TextToSpeech(this, status -> {});
         loadHistory();
     }
 
@@ -199,7 +213,11 @@ public class ChatActivity extends Activity {
                 streamingBubble.setText(streamingText.toString());
             });
         } else if ("message.complete".equals(type)) {
+            final String spoken = streamingText.toString();
             ui.post(() -> { streaming = false; streamingBubble = null; streamingText.setLength(0); });
+            if (ttsOn && tts != null && !spoken.isEmpty()) {
+                tts.speak(spoken, TextToSpeech.QUEUE_ADD, null, "colink-msg");
+            }
         }
     }
 
@@ -255,5 +273,6 @@ public class ChatActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         if (gw != null) gw.close();
+        if (tts != null) { tts.stop(); tts.shutdown(); }
     }
 }
