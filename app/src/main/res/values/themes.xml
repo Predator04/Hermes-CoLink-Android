@@ -7,8 +7,6 @@
     <style name="Theme.CoLink.Call" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/colink_accent</item>
         <item name="android:windowBackground">@color/colink_bg</item>
-        <item name="android:windowShowWhenLocked">true</item>
-        <item name="android:windowTurnScreenOn">true</item>
         <item name="android:windowFullscreen">true</item>
     </style>
 </resources>
