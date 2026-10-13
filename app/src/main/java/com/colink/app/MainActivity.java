@@ -195,11 +195,18 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(32, 48, 32, 32);
 
+        LinearLayout headerRow = new LinearLayout(this);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
         TextView header = new TextView(this);
         header.setText("Sessions");
         header.setTextSize(22);
         header.setTextColor(Color.WHITE);
-        root.addView(header);
+        headerRow.addView(header, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        Button kanban = new Button(this);
+        kanban.setText("📋 Kanban");
+        kanban.setOnClickListener(v -> startActivity(new Intent(this, KanbanActivity.class).putExtra("url", url)));
+        headerRow.addView(kanban);
+        root.addView(headerRow);
 
         if (sessions.isEmpty()) {
             TextView empty = new TextView(this);

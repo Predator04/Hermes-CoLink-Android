@@ -38,6 +38,12 @@
             android:exported="false"
             android:theme="@style/Theme.CoLink" />
 
+        <!-- Kanban board view -->
+        <activity
+            android:name=".KanbanActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CoLink" />
+
         <!-- Persistent WS foreground service (background agent-call) -->
         <service
             android:name=".CoLinkService"
