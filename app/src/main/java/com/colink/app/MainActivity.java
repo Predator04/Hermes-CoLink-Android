@@ -1,6 +1,7 @@
 package com.colink.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,17 +10,36 @@ import android.view.Gravity;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
-/** Login + session list — Phase 1 "connect" screen. */
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** Login → session list. */
 public class MainActivity extends Activity {
     private EditText urlField, userField, passField;
     private TextView status;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
+    private static class Session {
+        final String id, title, model;
+        final int count;
+        Session(String id, String title, String model, int count) {
+            this.id = id; this.title = title; this.model = model; this.count = count;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        buildLogin();
+    }
+
+    private void buildLogin() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(48, 64, 48, 48);
@@ -58,7 +78,6 @@ public class MainActivity extends Activity {
 
         status = new TextView(this);
         status.setTextColor(Color.LTGRAY);
-        status.setTextIsSelectable(true);
         status.setPadding(0, 24, 0, 0);
         root.addView(status);
 
@@ -73,17 +92,74 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 DashboardClient c = new DashboardClient(url);
-                boolean ok = c.login(user, pass);
-                if (!ok) {
+                if (!c.login(user, pass)) {
                     ui.post(() -> status.setText("Login failed — check URL + credentials"));
                     return;
                 }
-                String me = c.getMe();
                 String sessions = c.getSessions();
-                ui.post(() -> status.setText("✓ Connected\n\n" + me + "\n\n" + sessions));
+                List<Session> list = parseSessions(sessions);
+                ui.post(() -> showSessions(url, list));
             } catch (Exception e) {
                 ui.post(() -> status.setText("Error: " + e.getMessage()));
             }
         }).start();
+    }
+
+    private List<Session> parseSessions(String json) throws Exception {
+        List<Session> out = new ArrayList<>();
+        JSONObject obj = new JSONObject(json);
+        JSONArray arr = obj.optJSONArray("sessions");
+        if (arr != null) {
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject s = arr.optJSONObject(i);
+                if (s == null) continue;
+                String id = s.optString("id");
+                String title = s.optString("title", "");
+                if (title.isEmpty()) title = s.optString("display_name", "Untitled");
+                out.add(new Session(id, title, s.optString("model", ""), s.optInt("message_count", 0)));
+            }
+        }
+        return out;
+    }
+
+    private void showSessions(String url, List<Session> sessions) {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(32, 48, 32, 32);
+
+        TextView header = new TextView(this);
+        header.setText("Sessions");
+        header.setTextSize(22);
+        header.setTextColor(Color.WHITE);
+        root.addView(header);
+
+        if (sessions.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("No sessions yet.");
+            empty.setTextColor(Color.GRAY);
+            empty.setPadding(0, 24, 0, 0);
+            root.addView(empty);
+        } else {
+            ListView list = new ListView(this);
+            list.setPadding(0, 16, 0, 0);
+            List<String> rows = new ArrayList<>();
+            for (Session s : sessions) {
+                String meta = (s.model.isEmpty() ? "" : s.model + " · ") + s.count + " msgs";
+                rows.add(s.title + "\n" + meta);
+            }
+            list.setAdapter(new android.widget.ArrayAdapter<>(this,
+                    android.R.layout.simple_list_item_2, android.R.id.text1, rows));
+            list.setOnItemClickListener((parent, view, pos, id) -> {
+                Session s = sessions.get(pos);
+                Intent i = new Intent(this, ChatActivity.class);
+                i.putExtra("url", url);
+                i.putExtra("session_id", s.id);
+                i.putExtra("title", s.title);
+                startActivity(i);
+            });
+            root.addView(list);
+        }
+
+        setContentView(root);
     }
 }
