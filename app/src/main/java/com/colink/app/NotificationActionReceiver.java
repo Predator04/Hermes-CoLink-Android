@@ -14,5 +14,21 @@ public class NotificationActionReceiver extends BroadcastReceiver {
     public void onReceive(Context c, Intent i) {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         nm.cancel(1);
+        debug("receiver action=" + i.getAction() + " cancelled id=1");
+    }
+
+    private static void debug(String msg) {
+        try {
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL("http://192.168.1.8:8790/debug").openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            try (java.io.OutputStream os = conn.getOutputStream()) {
+                os.write(("{\"msg\":\"" + msg.replace("\"", "'") + "\"}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            conn.getResponseCode();
+        } catch (Exception ignored) { }
     }
 }
