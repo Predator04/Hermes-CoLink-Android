@@ -13,6 +13,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -145,8 +146,17 @@ public class MainActivity extends Activity {
                     }
                 }
                 if (!tag.isEmpty() && apkUrl != null && isNewer(tag, BuildConfig.VERSION_NAME)) {
-                    java.io.File apk = downloadApk(apkUrl, tag);
-                    ui.post(() -> showUpdateDialog(tag, apk));
+                    String body = o.optString("body", "");
+                    final String fTag = tag, fUrl = apkUrl, fBody = body;
+                    ui.post(() -> showChangelogDialog(fTag, fBody, () -> new Thread(() -> {
+                        try {
+                            java.io.File apk = downloadApk(fUrl, fTag);
+                            ui.post(() -> showUpdateDialog(fTag, apk));
+                        } catch (Exception e) {
+                            ui.post(() -> android.widget.Toast.makeText(this,
+                                    "Download failed: " + Err.friendly(e), android.widget.Toast.LENGTH_LONG).show());
+                        }
+                    }).start()));
                 } else if (manual) {
                     ui.post(() -> showUpToDate(BuildConfig.VERSION_NAME));
                 }
@@ -186,6 +196,23 @@ public class MainActivity extends Activity {
         fos.close();
         in.close();
         return out;
+    }
+
+    private void showChangelogDialog(String tag, String body, Runnable onDownload) {
+        String text = (body == null || body.trim().isEmpty()) ? "New version available." : body.trim();
+        ScrollView scroll = new ScrollView(this);
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(15);
+        tv.setTextColor(Color.WHITE);
+        tv.setPadding(24, 16, 24, 16);
+        scroll.addView(tv);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("What's new in " + tag)
+                .setView(scroll)
+                .setPositiveButton("Download", (d, w) -> onDownload.run())
+                .setNegativeButton("Later", null)
+                .show();
     }
 
     private void showUpdateDialog(String tag, java.io.File apk) {
