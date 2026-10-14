@@ -16,13 +16,15 @@ import org.json.JSONObject;
 /** Full-screen "agent call" — fires on a server→client request (clarify/approval/sudo) or an FCM push. */
 public class CallActivity extends Activity {
     private String reqId;
+    private String method;
+    private String params;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         reqId = getIntent().getStringExtra("req_id");
-        String method = getIntent().getStringExtra("method");
-        String params = getIntent().getStringExtra("params");
+        method = getIntent().getStringExtra("method");
+        params = getIntent().getStringExtra("params");
         final String fcmTitle = getIntent().getStringExtra("title");
         final String fcmBody = getIntent().getStringExtra("body");
         final boolean fcm = fcmTitle != null && !fcmTitle.isEmpty();
@@ -143,6 +145,7 @@ public class CallActivity extends Activity {
                 g.respond(reqId, r);
             } catch (Exception ignored) { }
         }
+        ApprovalLog.add(this, method, yes, readableParams(params));
         finish();
     }
 }

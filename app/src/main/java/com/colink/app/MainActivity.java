@@ -259,7 +259,7 @@ public class MainActivity extends Activity {
         passField = new EditText(this);
         passField.setHint("Password");
         passField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        passField.setText(prefs.getString("password", ""));
+        passField.setText(CryptoUtils.decrypt(prefs.getString("password", "")));
         root.addView(passField);
 
         CheckBox showPass = new CheckBox(this);
@@ -325,7 +325,7 @@ public class MainActivity extends Activity {
                 prefs.edit().putString("url", url).putString("username", user).apply();
                 connected = true;
                 if (rememberChecked) {
-                    prefs.edit().putString("password", pass).apply();
+                    prefs.edit().putString("password", CryptoUtils.encrypt(pass)).apply();
                 } else {
                     prefs.edit().remove("password").apply();
                 }
@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
             org.json.JSONObject p = new org.json.JSONObject();
             p.put("url", url);
             p.put("username", user);
-            p.put("password", pass);
+            p.put("password", CryptoUtils.encrypt(pass));
             out.put(p);
             prefs.edit().putString("profiles", out.toString()).apply();
         } catch (Exception ignored) { }
@@ -379,7 +379,7 @@ public class MainActivity extends Activity {
             if (p == null) continue;
             String u = p.optString("url");
             String n = p.optString("username");
-            String w = p.optString("password");
+            String w = CryptoUtils.decrypt(p.optString("password"));
             Button btn = new Button(this);
             btn.setText(n + " @ " + u.replaceFirst("https?://", ""));
             btn.setOnClickListener(v -> {

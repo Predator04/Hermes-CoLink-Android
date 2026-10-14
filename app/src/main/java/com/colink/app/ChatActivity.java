@@ -2,11 +2,16 @@ package com.colink.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -18,6 +23,8 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +43,8 @@ public class ChatActivity extends Activity {
     private TextToSpeech tts;
     private boolean ttsOn = false;
     private Button ttsButton;
+    private boolean callMode = false;
+    private Button callButton;
 
     private static class Msg {
         final boolean fromUser;
@@ -72,6 +81,10 @@ public class ChatActivity extends Activity {
             ttsButton.setText(ttsOn ? "🔊" : "🔇");
         });
         headerRow.addView(ttsButton);
+        callButton = new Button(this);
+        callButton.setText("📞");
+        callButton.setOnClickListener(v -> toggleCallMode());
+        headerRow.addView(callButton);
         root.addView(headerRow);
 
         scroll = new ScrollView(this);
@@ -87,6 +100,10 @@ public class ChatActivity extends Activity {
         input.setHint("Message…");
         input.setTextColor(Color.WHITE);
         inputRow.addView(input, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        Button cam = new Button(this);
+        cam.setText("📷");
+        cam.setOnClickListener(v -> pickPhoto());
+        inputRow.addView(cam);
         Button mic = new Button(this);
         mic.setText("🎤");
         mic.setOnClickListener(v -> startVoice());
@@ -98,7 +115,17 @@ public class ChatActivity extends Activity {
         root.addView(inputRow);
 
         setContentView(root);
-        tts = new TextToSpeech(this, status -> {});
+        tts = new TextToSpeech(this, status -> {
+            tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override public void onStart(String id) { }
+                @Override public void onDone(String id) {
+                    if (callMode) ui.post(() -> startVoice());
+                }
+                @Override public void onError(String id) {
+                    if (callMode) ui.post(() -> startVoice());
+                }
+            });
+        });
         loadHistory();
     }
 
@@ -260,6 +287,74 @@ public class ChatActivity extends Activity {
         }
     }
 
+    private void pickPhoto() {
+        try {
+            Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+            i.setType("image/*");
+            startActivityForResult(Intent.createChooser(i, "Choose photo"), 2);
+        } catch (Exception e) {
+            addBubble("Photo picker not available", false);
+        }
+    }
+
+    private Bitmap readAndDownscale(Uri uri) throws Exception {
+        InputStream in = getContentResolver().openInputStream(uri);
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inJustDecodeBounds = true;
+        BitmapFactory.decodeStream(in, null, opts);
+        in.close();
+        int max = 1280;
+        int scale = 1;
+        while (opts.outWidth / scale > max || opts.outHeight / scale > max) scale *= 2;
+        BitmapFactory.Options o2 = new BitmapFactory.Options();
+        o2.inSampleSize = scale;
+        in = getContentResolver().openInputStream(uri);
+        Bitmap bmp = BitmapFactory.decodeStream(in, null, o2);
+        in.close();
+        if (bmp == null) throw new Exception("Could not decode image");
+        return bmp;
+    }
+
+    private void sendPhoto(Uri uri) {
+        new Thread(() -> {
+            try {
+                Bitmap bmp = readAndDownscale(uri);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bmp.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                String b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                String dataUrl = "data:image/jpeg;base64," + b64;
+
+                DashboardClient c = new DashboardClient(baseUrl);
+                JSONObject body = new JSONObject();
+                body.put("data_url", dataUrl);
+                body.put("filename", "photo.jpg");
+                JSONObject r = new JSONObject(c.post("/api/chat/image-upload", body.toString()));
+                String path = r.optString("path", "");
+                if (path.isEmpty()) {
+                    ui.post(() -> addBubble("Photo upload failed", false));
+                    return;
+                }
+                ui.post(() -> addBubble("📷 Photo sent", true));
+                streamReply("/image " + path);
+            } catch (Exception e) {
+                ui.post(() -> addBubble("Photo failed: " + Err.friendly(e), false));
+            }
+        }).start();
+    }
+
+    private void toggleCallMode() {
+        callMode = !callMode;
+        if (callMode) {
+            callButton.setText("🔴 End");
+            ttsOn = true;
+            ttsButton.setText("🔊");
+            startVoice();
+        } else {
+            callButton.setText("📞");
+            if (tts != null) tts.stop();
+        }
+    }
+
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
@@ -267,9 +362,22 @@ public class ChatActivity extends Activity {
             ArrayList<String> r = data.getStringArrayListExtra(
                     android.speech.RecognizerIntent.EXTRA_RESULTS);
             if (r != null && !r.isEmpty()) {
-                input.setText(r.get(0));
-                onSend();
+                String spoken = r.get(0);
+                if (callMode) {
+                    addBubble(spoken, true);
+                    streamReply(spoken);
+                } else {
+                    input.setText(spoken);
+                    onSend();
+                }
             }
+        } else if (req == 1 && callMode) {
+            // User cancelled / didn't speak — end the call.
+            callMode = false;
+            callButton.setText("📞");
+            if (tts != null) tts.stop();
+        } else if (req == 2 && res == RESULT_OK && data != null && data.getData() != null) {
+            sendPhoto(data.getData());
         }
     }
 

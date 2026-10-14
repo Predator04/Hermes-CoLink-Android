@@ -1,6 +1,7 @@
 package com.colink.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -53,6 +54,26 @@ public class SettingsActivity extends Activity {
         vibrate.setChecked(prefs.getBoolean("vibrate", true));
         vibrate.setOnCheckedChangeListener((v, checked) -> prefs.edit().putBoolean("vibrate", checked).apply());
         root.addView(vibrate);
+
+        Button battery = new Button(this);
+        battery.setText("🔋 Disable battery optimization");
+        battery.setOnClickListener(v -> {
+            try {
+                Intent i = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                i.setData(android.net.Uri.parse("package:" + getPackageName()));
+                startActivity(i);
+            } catch (Exception e) {
+                try {
+                    startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                } catch (Exception e2) { }
+            }
+        });
+        root.addView(battery);
+
+        Button history = new Button(this);
+        history.setText("🗂 Approval history");
+        history.setOnClickListener(v -> startActivity(new Intent(this, ApprovalHistoryActivity.class)));
+        root.addView(history);
 
         setContentView(root);
     }
