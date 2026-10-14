@@ -386,6 +386,10 @@ public class MainActivity extends Activity {
 
         LinearLayout headerRow = new LinearLayout(this);
         headerRow.setOrientation(LinearLayout.HORIZONTAL);
+        Button back = new Button(this);
+        back.setText("⬅");
+        back.setOnClickListener(v -> buildLogin());
+        headerRow.addView(back);
         TextView header = new TextView(this);
         header.setText("Sessions");
         header.setTextSize(22);
