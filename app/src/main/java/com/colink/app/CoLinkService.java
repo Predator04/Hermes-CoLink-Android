@@ -5,15 +5,21 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.IBinder;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /** Foreground service holding a persistent WS so the agent can "call" in the background. */
 public class CoLinkService extends Service {
     private static final String CHANNEL_ID = "colink";
+    private static final Map<String, Boolean> pendingResponses = new ConcurrentHashMap<>();
     private GatewayClient gw;
     private String baseUrl;
 
@@ -30,12 +36,44 @@ public class CoLinkService extends Service {
             String url = intent.getStringExtra("url");
             String user = intent.getStringExtra("username");
             String pass = intent.getStringExtra("password");
+            if (url == null || user == null) {
+                SharedPreferences p = getSharedPreferences("colink", MODE_PRIVATE);
+                url = p.getString("url", null);
+                user = p.getString("username", null);
+                pass = CryptoUtils.decrypt(p.getString("password", ""));
+            }
             if (url != null && user != null) {
                 baseUrl = url;
-                connect(url, user, pass);
+                connect(url, user, pass == null ? "" : pass);
             }
         }
         return START_STICKY;
+    }
+
+    /** Answer an approval/clarify request from the notification (Approve/Deny). */
+    public static void respond(Context c, String requestId, boolean approved) {
+        if (requestId == null || requestId.isEmpty()) return;
+        GatewayClient g = Gw.instance;
+        if (g != null && g.isConnected()) {
+            try {
+                JSONObject r = new JSONObject();
+                r.put("value", approved ? "yes" : "no");
+                r.put("approved", approved);
+                g.respond(requestId, r);
+                return;
+            } catch (Exception ignored) { }
+        }
+        // WS not ready — queue + wake the service to reconnect, resume, then answer.
+        pendingResponses.put(requestId, approved);
+        ensureRunning(c);
+    }
+
+    /** Start the service (with prefs credentials) so the WS connects and can answer. */
+    public static void ensureRunning(Context c) {
+        try {
+            Intent svc = new Intent(c, CoLinkService.class);
+            c.startForegroundService(svc);
+        } catch (Exception ignored) { }
     }
 
     private void connect(String url, String user, String pass) {
@@ -80,6 +118,17 @@ public class CoLinkService extends Service {
     }
 
     private void onRequest(String id, String method, JSONObject params) {
+        // A queued notification decision: answer it now that the request has re-arrived.
+        Boolean decision = pendingResponses.remove(id);
+        if (decision != null) {
+            try {
+                JSONObject r = new JSONObject();
+                r.put("value", decision ? "yes" : "no");
+                r.put("approved", decision);
+                gw.respond(id, r);
+            } catch (Exception ignored) { }
+            return;
+        }
         Intent ci = new Intent(this, CallActivity.class);
         ci.putExtra("req_id", id);
         ci.putExtra("method", method);

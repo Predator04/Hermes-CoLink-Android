@@ -5,17 +5,26 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-/** Handles notification action buttons: Silent (stop ringing) and Deny (dismiss). */
+/** Handles notification action buttons: Approve/Deny (answer the agent) and Silent (stop ringing). */
 public class NotificationActionReceiver extends BroadcastReceiver {
+    public static final String ACTION_APPROVE = "com.colink.app.ACTION_APPROVE";
     public static final String ACTION_SILENT = "com.colink.app.ACTION_SILENT";
     public static final String ACTION_DENY = "com.colink.app.ACTION_DENY";
 
     @Override
     public void onReceive(Context c, Intent i) {
+        String action = i.getAction() == null ? "" : i.getAction();
         CallRingtone.stop();
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         nm.cancel(1);
-        debug("receiver action=" + i.getAction() + " stopped ringtone + cancelled");
+        String reqId = i.getStringExtra("request_id");
+        debug("receiver action=" + action + " req=" + reqId);
+        if (ACTION_APPROVE.equals(action)) {
+            CoLinkService.respond(c, reqId, true);
+        } else if (ACTION_DENY.equals(action)) {
+            CoLinkService.respond(c, reqId, false);
+        }
+        // SILENT: ring already stopped + notification cancelled above.
     }
 
     private static void debug(String msg) {

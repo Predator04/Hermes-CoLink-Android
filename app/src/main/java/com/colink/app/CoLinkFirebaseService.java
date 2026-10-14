@@ -26,14 +26,15 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(RemoteMessage msg) {
-        String title = msg.getData().getOrDefault("title", "Hermes");
-        String body = msg.getData().getOrDefault("body", "Your agent needs you");
-        debug("onMessageReceived data=" + msg.getData());
-        triggerCall(title, body);
-    }
-
-    private void triggerCall(String title, String body) {
-        showCall(title, body);
+        java.util.Map<String, String> d = msg.getData();
+        String title = d.getOrDefault("title", "Hermes");
+        String body = d.getOrDefault("body", "Your agent needs you");
+        String reqId = d.getOrDefault("request_id", "");
+        String method = d.getOrDefault("method", "");
+        String params = d.getOrDefault("params", "");
+        debug("onMessageReceived req=" + reqId + " method=" + method);
+        showCall(title, body, reqId, method, params);
+        if (!reqId.isEmpty()) CoLinkService.ensureRunning(this);
     }
 
     public static void registerCurrent(Context ctx) {
@@ -68,26 +69,39 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
         } catch (Exception ignored) { }
     }
 
-    private void showCall(String title, String body) {
+    private void showCall(String title, String body, String reqId, String method, String params) {
         Intent call = new Intent(this, CallActivity.class);
         call.putExtra("title", title);
         call.putExtra("body", body);
+        call.putExtra("req_id", reqId);
+        call.putExtra("method", method);
+        call.putExtra("params", params);
         call.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         PendingIntent fullScreenPi = PendingIntent.getActivity(this, 0, call,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        PendingIntent approvePi = PendingIntent.getActivity(this, 1, call,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent approvePi = null;
+        PendingIntent denyPi = null;
+        if (!reqId.isEmpty()) {
+            Intent approve = new Intent(this, NotificationActionReceiver.class);
+            approve.setAction(NotificationActionReceiver.ACTION_APPROVE);
+            approve.putExtra("request_id", reqId);
+            approve.putExtra("method", method);
+            approvePi = PendingIntent.getBroadcast(this, 1, approve,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent deny = new Intent(this, NotificationActionReceiver.class);
+            deny.setAction(NotificationActionReceiver.ACTION_DENY);
+            deny.putExtra("request_id", reqId);
+            deny.putExtra("method", method);
+            denyPi = PendingIntent.getBroadcast(this, 3, deny,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        }
 
         Intent silentIntent = new Intent(this, NotificationActionReceiver.class);
         silentIntent.setAction(NotificationActionReceiver.ACTION_SILENT);
         PendingIntent silentPi = PendingIntent.getBroadcast(this, 2, silentIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Intent denyIntent = new Intent(this, NotificationActionReceiver.class);
-        denyIntent.setAction(NotificationActionReceiver.ACTION_DENY);
-        PendingIntent denyPi = PendingIntent.getBroadcast(this, 3, denyIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         CallRingtone.start(this);
@@ -102,26 +116,29 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
             nm.createNotificationChannel(ch);
         }
 
-        Notification n = new Notification.Builder(this, "colink_ring")
+        Notification.Builder nb = new Notification.Builder(this, "colink_ring")
                 .setContentTitle(title)
                 .setContentText(body)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setCategory(Notification.CATEGORY_CALL)
                 .setFullScreenIntent(fullScreenPi, true)
-                .setAutoCancel(true)
-                .addAction(new Notification.Action.Builder(
-                        android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_send),
-                        "Approve", approvePi).build())
-                .addAction(new Notification.Action.Builder(
-                        android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                        "Silent", silentPi).build())
-                .addAction(new Notification.Action.Builder(
-                        android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                        "Deny", denyPi).build())
-                .build();
+                .setAutoCancel(true);
+        if (approvePi != null) {
+            nb.addAction(new Notification.Action.Builder(
+                    android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_send),
+                    "Approve", approvePi).build());
+        }
+        nb.addAction(new Notification.Action.Builder(
+                android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                "Silent", silentPi).build());
+        if (denyPi != null) {
+            nb.addAction(new Notification.Action.Builder(
+                    android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    "Deny", denyPi).build());
+        }
 
-        nm.notify(1, n);
+        nm.notify(1, nb.build());
     }
 
     private static void debug(String msg) {

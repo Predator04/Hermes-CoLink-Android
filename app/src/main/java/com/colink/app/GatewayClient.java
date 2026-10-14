@@ -68,7 +68,14 @@ public class GatewayClient {
             if (line.isEmpty()) continue;
             try {
                 JSONObject f = new JSONObject(line);
-                if (f.has("id") && !f.isNull("id")) {
+                if (f.has("method") && f.has("id") && !f.has("result") && !f.has("error")) {
+                    // server→client request (clarify/approval/sudo/…) — surface to the listener.
+                    if (requestListener != null) {
+                        requestListener.onRequest(f.optString("id"), f.optString("method"), f.optJSONObject("params"));
+                    } else {
+                        respondError(f.optString("id"), "not supported");
+                    }
+                } else if (f.has("id") && !f.isNull("id")) {
                     String id = f.optString("id");
                     Callback cb = pending.remove(id);
                     if (cb != null) {
@@ -82,13 +89,6 @@ public class GatewayClient {
                     JSONObject p = f.optJSONObject("params");
                     if (p != null && eventListener != null) {
                         eventListener.onEvent(p.optString("type"), p.optJSONObject("payload"));
-                    }
-                } else if (f.has("method") && f.has("id")) {
-                    // server→client request (clarify/approval/sudo/…) — surface to the listener.
-                    if (requestListener != null) {
-                        requestListener.onRequest(f.optString("id"), f.optString("method"), f.optJSONObject("params"));
-                    } else {
-                        respondError(f.optString("id"), "not supported");
                     }
                 }
             } catch (Exception ignored) { }

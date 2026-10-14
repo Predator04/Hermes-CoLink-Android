@@ -27,21 +27,21 @@ public class CallActivity extends Activity {
         params = getIntent().getStringExtra("params");
         final String fcmTitle = getIntent().getStringExtra("title");
         final String fcmBody = getIntent().getStringExtra("body");
-        final boolean fcm = fcmTitle != null && !fcmTitle.isEmpty();
+        final boolean answerable = reqId != null && !reqId.isEmpty();
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(48, 64, 48, 48);
 
         TextView title = new TextView(this);
-        title.setText(fcm ? ("📞 " + fcmTitle) : "📞 Your agent needs you");
+        title.setText((fcmTitle != null && !fcmTitle.isEmpty()) ? ("📞 " + fcmTitle) : "📞 Your agent needs you");
         title.setTextSize(26);
         title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
 
         TextView what = new TextView(this);
-        what.setText(fcm ? "" : humanize(method));
+        what.setText(answerable ? humanize(method) : "");
         what.setTextSize(15);
         what.setTextColor(Color.rgb(79, 195, 247));
         what.setGravity(Gravity.CENTER);
@@ -56,7 +56,8 @@ public class CallActivity extends Activity {
         scroll.setLayoutParams(scrollLp);
 
         TextView detail = new TextView(this);
-        detail.setText(fcm ? (fcmBody == null ? "" : fcmBody) : readableParams(params));
+        String ptext = readableParams(params);
+        detail.setText(ptext.isEmpty() ? (fcmBody == null ? "" : fcmBody) : ptext);
         detail.setTextSize(15);
         detail.setTextColor(Color.LTGRAY);
         detail.setTextIsSelectable(true);
@@ -66,13 +67,13 @@ public class CallActivity extends Activity {
         root.addView(scroll);
 
         Button accept = new Button(this);
-        accept.setText(fcm ? "Open" : "Answer");
+        accept.setText(answerable ? "Answer" : "Open");
         accept.setOnClickListener(v -> {
-            if (fcm) {
+            if (answerable) {
+                answer(true);
+            } else {
                 startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 finish();
-            } else {
-                answer(true);
             }
         });
         root.addView(accept);
@@ -89,10 +90,10 @@ public class CallActivity extends Activity {
         root.addView(silent);
 
         Button decline = new Button(this);
-        decline.setText(fcm ? "Dismiss" : "Decline");
+        decline.setText(answerable ? "Decline" : "Dismiss");
         decline.setOnClickListener(v -> {
-            if (fcm) finish();
-            else answer(false);
+            if (answerable) answer(false);
+            else finish();
         });
         root.addView(decline);
 
