@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
         buildLogin();
         checkFullScreenPermission();
         registerPhoneAccount();
+        CoLinkFirebaseService.registerCurrent(this);
         // Auto-connect when credentials are remembered — land on Sessions, not the login screen.
         if (prefs.contains("password") && prefs.contains("username")) {
             doLogin();

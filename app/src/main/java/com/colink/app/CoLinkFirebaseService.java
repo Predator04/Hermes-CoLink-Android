@@ -20,7 +20,7 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
 
     @Override
     public void onNewToken(String token) {
-        String url = getSharedPreferences("colink", MODE_PRIVATE).getString("url", "");
+        String url = getSharedPreferences("colink", MODE_PRIVATE).getString("url", "http://192.168.1.8:9119");
         new Thread(() -> registerToken(url, token)).start();
     }
 
@@ -52,7 +52,18 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
         }
     }
 
-    private void registerToken(String url, String token) {
+    public static void registerCurrent(Context ctx) {
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                    .addOnSuccessListener(tok -> {
+                        String url = ctx.getSharedPreferences("colink", Context.MODE_PRIVATE)
+                                .getString("url", "http://192.168.1.8:9119");
+                        registerToken(url, tok);
+                    });
+        } catch (Exception ignored) { }
+    }
+
+    public static void registerToken(String url, String token) {
         String host = extractHost(url);
         if (host == null || token == null || token.isEmpty()) return;
         try {
