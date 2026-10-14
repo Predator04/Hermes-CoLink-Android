@@ -433,6 +433,10 @@ public class MainActivity extends Activity {
         model.setText("⚙️ Model");
         model.setOnClickListener(v -> startActivity(new Intent(this, ModelActivity.class).putExtra("url", url)));
         headerRow.addView(model);
+        Button settings = new Button(this);
+        settings.setText("🔧");
+        settings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        headerRow.addView(settings);
         root.addView(headerRow);
 
         if (sessions.isEmpty()) {

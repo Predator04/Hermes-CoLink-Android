@@ -79,6 +79,7 @@ public class CallActivity extends Activity {
         silent.setText("🔕 Silent");
         silent.setOnClickListener(v -> {
             try {
+                CallRingtone.stop();
                 android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
                 nm.cancel(1);
             } catch (Exception ignored) { }

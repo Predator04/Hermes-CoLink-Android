@@ -90,17 +90,19 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
         PendingIntent denyPi = PendingIntent.getBroadcast(this, 3, denyIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        CallRingtone.start(this);
+
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (android.os.Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel ch = new NotificationChannel("colink_call", "Agent calls",
+            boolean vibrate = getSharedPreferences("colink", MODE_PRIVATE).getBoolean("vibrate", true);
+            NotificationChannel ch = new NotificationChannel("colink_ring", "Agent calls",
                     NotificationManager.IMPORTANCE_HIGH);
-            ch.setSound(android.provider.Settings.System.DEFAULT_RINGTONE_URI, null);
-            ch.enableVibration(true);
-            ch.setVibrationPattern(new long[]{0, 400, 400, 400});
+            ch.enableVibration(vibrate);
+            if (vibrate) ch.setVibrationPattern(new long[]{0, 400, 400, 400});
             nm.createNotificationChannel(ch);
         }
 
-        Notification n = new Notification.Builder(this, "colink_call")
+        Notification n = new Notification.Builder(this, "colink_ring")
                 .setContentTitle(title)
                 .setContentText(body)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)

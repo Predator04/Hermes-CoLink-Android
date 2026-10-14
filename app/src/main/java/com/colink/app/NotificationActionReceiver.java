@@ -12,9 +12,10 @@ public class NotificationActionReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context c, Intent i) {
+        CallRingtone.stop();
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         nm.cancel(1);
-        debug("receiver action=" + i.getAction() + " cancelled id=1");
+        debug("receiver action=" + i.getAction() + " stopped ringtone + cancelled");
     }
 
     private static void debug(String msg) {

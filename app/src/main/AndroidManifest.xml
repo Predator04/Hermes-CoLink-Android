@@ -54,6 +54,12 @@
             android:exported="false"
             android:theme="@style/Theme.CoLink" />
 
+        <!-- App settings -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CoLink" />
+
         <!-- Persistent WS foreground service (background agent-call) -->
         <service
             android:name=".CoLinkService"
