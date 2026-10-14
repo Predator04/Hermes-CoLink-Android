@@ -33,20 +33,7 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
     }
 
     private void triggerCall(String title, String body) {
-        try {
-            // Ensure the foreground service is running (grants the background-activity-launch exemption).
-            startForegroundService(new Intent(this, CoLinkService.class));
-            // Launch the full-screen call UI directly.
-            Intent call = new Intent(this, CallActivity.class);
-            call.putExtra("title", title);
-            call.putExtra("body", body);
-            call.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(call);
-            debug("startActivity CallActivity OK");
-        } catch (Exception e) {
-            debug("startActivity EX: " + e.getClass().getSimpleName() + " " + e.getMessage());
-            showCall(title, body);
-        }
+        showCall(title, body);
     }
 
     public static void registerCurrent(Context ctx) {
@@ -94,6 +81,9 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
         if (android.os.Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel("colink_call", "Agent calls",
                     NotificationManager.IMPORTANCE_HIGH);
+            ch.setSound(android.provider.Settings.System.DEFAULT_RINGTONE_URI, null);
+            ch.enableVibration(true);
+            ch.setVibrationPattern(new long[]{0, 400, 400, 400});
             nm.createNotificationChannel(ch);
         }
 
