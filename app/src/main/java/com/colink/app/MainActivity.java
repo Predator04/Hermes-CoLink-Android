@@ -26,6 +26,7 @@ public class MainActivity extends Activity {
     private EditText urlField, userField, passField;
     private CheckBox remember;
     private TextView status;
+    private boolean connected = false;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private android.content.SharedPreferences prefs;
 
@@ -221,6 +222,13 @@ public class MainActivity extends Activity {
         sub.setGravity(Gravity.CENTER);
         root.addView(sub);
 
+        TextView connStatus = new TextView(this);
+        connStatus.setText(connected ? "● Connected" : "○ Not connected");
+        connStatus.setTextColor(connected ? Color.rgb(74, 222, 128) : Color.GRAY);
+        connStatus.setGravity(Gravity.CENTER);
+        connStatus.setPadding(0, 8, 0, 0);
+        root.addView(connStatus);
+
         urlField = new EditText(this);
         urlField.setHint("Dashboard URL");
         urlField.setText(prefs.getString("url", "http://192.168.1.8:9119"));
@@ -253,7 +261,7 @@ public class MainActivity extends Activity {
         root.addView(remember);
 
         Button connect = new Button(this);
-        connect.setText("Connect");
+        connect.setText(connected ? "Reconnect" : "Connect");
         connect.setOnClickListener(v -> doLogin());
         root.addView(connect);
 
@@ -298,6 +306,7 @@ public class MainActivity extends Activity {
                     return;
                 }
                 prefs.edit().putString("url", url).putString("username", user).apply();
+                connected = true;
                 if (rememberChecked) {
                     prefs.edit().putString("password", pass).apply();
                 } else {
