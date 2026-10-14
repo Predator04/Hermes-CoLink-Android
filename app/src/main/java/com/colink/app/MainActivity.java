@@ -45,6 +45,28 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         buildLogin();
+        checkFullScreenPermission();
+    }
+
+    private void checkFullScreenPermission() {
+        boolean allowed = true;
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            allowed = nm != null && nm.canUseFullScreenIntent();
+        } else if (android.os.Build.VERSION.SDK_INT >= 29) {
+            allowed = checkSelfPermission(android.Manifest.permission.USE_FULL_SCREEN_INTENT)
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        if (!allowed) {
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("Enable full-screen calls")
+                    .setMessage("So the agent can ring your phone like a call, allow CoLink full-screen notifications.")
+                    .setPositiveButton("Open settings", (d, w) -> startActivity(
+                            new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())))
+                    .setNegativeButton("Later", null)
+                    .show();
+        }
     }
 
     private void checkForUpdate(boolean manual) {
