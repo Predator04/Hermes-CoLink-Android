@@ -30,12 +30,13 @@ public class MainActivity extends Activity {
     private boolean connected = false;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private android.content.SharedPreferences prefs;
+    private boolean showAuto = false;
 
     private static class Session {
-        final String id, title, model;
+        final String id, title, model, source;
         final int count;
-        Session(String id, String title, String model, int count) {
-            this.id = id; this.title = title; this.model = model; this.count = count;
+        Session(String id, String title, String model, String source, int count) {
+            this.id = id; this.title = title; this.model = model; this.source = source; this.count = count;
         }
     }
 
@@ -430,7 +431,7 @@ public class MainActivity extends Activity {
                 String id = s.optString("id");
                 String title = s.optString("title", "");
                 if (title.isEmpty()) title = s.optString("display_name", "Untitled");
-                out.add(new Session(id, title, s.optString("model", ""), s.optInt("message_count", 0)));
+                out.add(new Session(id, title, s.optString("model", ""), s.optString("source", ""), s.optInt("message_count", 0)));
             }
         }
         return out;
@@ -460,15 +461,24 @@ public class MainActivity extends Activity {
         model.setText("⚙️ Model");
         model.setOnClickListener(v -> startActivity(new Intent(this, ModelActivity.class).putExtra("url", url)));
         headerRow.addView(model);
+        Button auto = new Button(this);
+        auto.setText(showAuto ? "Hide 🤖" : "Show 🤖");
+        auto.setOnClickListener(v -> { showAuto = !showAuto; showSessions(url, sessions); });
+        headerRow.addView(auto);
         Button settings = new Button(this);
         settings.setText("🔧");
         settings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         headerRow.addView(settings);
         root.addView(headerRow);
 
-        if (sessions.isEmpty()) {
+        List<Session> visible = new ArrayList<>();
+        for (Session s : sessions) {
+            if (!showAuto && "cron".equals(s.source)) continue;
+            visible.add(s);
+        }
+        if (visible.isEmpty()) {
             TextView empty = new TextView(this);
-            empty.setText("No sessions yet.");
+            empty.setText(showAuto ? "No sessions yet." : "No chats yet. Tap \"Show 🤖\" for automated runs.");
             empty.setTextColor(Color.GRAY);
             empty.setPadding(0, 24, 0, 0);
             root.addView(empty);
@@ -476,14 +486,15 @@ public class MainActivity extends Activity {
             ListView list = new ListView(this);
             list.setPadding(0, 16, 0, 0);
             List<String> rows = new ArrayList<>();
-            for (Session s : sessions) {
+            for (Session s : visible) {
+                String label = ("cron".equals(s.source) ? "🤖 " : "") + s.title;
                 String meta = (s.model.isEmpty() ? "" : s.model + " · ") + s.count + " msgs";
-                rows.add(s.title + "\n" + meta);
+                rows.add(label + "\n" + meta);
             }
             list.setAdapter(new android.widget.ArrayAdapter<>(this,
                     android.R.layout.simple_list_item_2, android.R.id.text1, rows));
             list.setOnItemClickListener((parent, view, pos, id) -> {
-                Session s = sessions.get(pos);
+                Session s = visible.get(pos);
                 Intent i = new Intent(this, ChatActivity.class);
                 i.putExtra("url", url);
                 i.putExtra("session_id", s.id);
