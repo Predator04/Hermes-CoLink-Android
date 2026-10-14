@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -28,7 +29,6 @@ public class CallActivity extends Activity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER);
         root.setPadding(48, 64, 48, 48);
 
         TextView title = new TextView(this);
@@ -46,14 +46,22 @@ public class CallActivity extends Activity {
         what.setPadding(0, 12, 0, 0);
         root.addView(what);
 
+        ScrollView scroll = new ScrollView(this);
+        scroll.setScrollbarFadingEnabled(false);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        scrollLp.setMargins(0, 16, 0, 16);
+        scroll.setLayoutParams(scrollLp);
+
         TextView detail = new TextView(this);
         detail.setText(fcm ? (fcmBody == null ? "" : fcmBody) : readableParams(params));
         detail.setTextSize(15);
         detail.setTextColor(Color.LTGRAY);
         detail.setTextIsSelectable(true);
-        detail.setGravity(Gravity.CENTER);
-        detail.setPadding(0, 24, 0, 48);
-        root.addView(detail);
+        detail.setGravity(Gravity.START);
+        detail.setPadding(8, 0, 8, 0);
+        scroll.addView(detail);
+        root.addView(scroll);
 
         Button accept = new Button(this);
         accept.setText(fcm ? "Open" : "Answer");
@@ -108,7 +116,7 @@ public class CallActivity extends Activity {
             String cmd = p.optString("command", p.optString("description", ""));
             if (!cmd.isEmpty()) return cmd;
             String s = p.toString(2);
-            return s.length() > 600 ? s.substring(0, 600) + "…" : s;
+            return s;
         } catch (Exception e) {
             return params;
         }
