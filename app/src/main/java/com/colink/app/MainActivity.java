@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -23,6 +24,7 @@ import java.util.List;
 /** Login → session list. */
 public class MainActivity extends Activity {
     private EditText urlField, userField, passField;
+    private CheckBox remember;
     private TextView status;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private android.content.SharedPreferences prefs;
@@ -177,7 +179,23 @@ public class MainActivity extends Activity {
         passField = new EditText(this);
         passField.setHint("Password");
         passField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        passField.setText(prefs.getString("password", ""));
         root.addView(passField);
+
+        CheckBox showPass = new CheckBox(this);
+        showPass.setText("👁 Show password");
+        showPass.setOnCheckedChangeListener((btn, checked) -> {
+            passField.setInputType(checked
+                    ? (android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
+                    : (android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD));
+            passField.setSelection(passField.getText().length());
+        });
+        root.addView(showPass);
+
+        remember = new CheckBox(this);
+        remember.setText("Remember username + password");
+        remember.setChecked(prefs.contains("password"));
+        root.addView(remember);
 
         Button connect = new Button(this);
         connect.setText("Connect");
@@ -215,6 +233,7 @@ public class MainActivity extends Activity {
         String url = urlField.getText().toString().trim();
         String user = userField.getText().toString().trim();
         String pass = passField.getText().toString();
+        final boolean rememberChecked = remember != null && remember.isChecked();
         status.setText("Connecting…");
         new Thread(() -> {
             try {
@@ -224,6 +243,11 @@ public class MainActivity extends Activity {
                     return;
                 }
                 prefs.edit().putString("url", url).putString("username", user).apply();
+                if (rememberChecked) {
+                    prefs.edit().putString("password", pass).apply();
+                } else {
+                    prefs.edit().remove("password").apply();
+                }
                 saveProfile(url, user, pass);
                 startService(new Intent(this, CoLinkService.class)
                         .putExtra("url", url)
