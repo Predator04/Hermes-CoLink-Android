@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -29,12 +30,19 @@ public class ModelActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(24, 48, 24, 24);
 
+        LinearLayout headerRow = new LinearLayout(this);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
+        Button back = new Button(this);
+        back.setText("⬅");
+        back.setOnClickListener(v -> finish());
+        headerRow.addView(back);
         TextView header = new TextView(this);
         header.setText("Model");
         header.setTextSize(20);
         header.setTextColor(Color.WHITE);
         header.setGravity(Gravity.CENTER);
-        root.addView(header);
+        headerRow.addView(header, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        root.addView(headerRow);
 
         ScrollView sv = new ScrollView(this);
         list = new LinearLayout(this);
