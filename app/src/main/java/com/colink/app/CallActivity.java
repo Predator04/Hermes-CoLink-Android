@@ -22,6 +22,7 @@ public class CallActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        CallRingtone.stop(); // the call screen is showing — stop ringing
         reqId = getIntent().getStringExtra("req_id");
         method = getIntent().getStringExtra("method");
         params = getIntent().getStringExtra("params");
