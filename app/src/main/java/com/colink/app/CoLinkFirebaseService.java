@@ -77,6 +77,19 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
         PendingIntent fullScreenPi = PendingIntent.getActivity(this, 0, call,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        PendingIntent approvePi = PendingIntent.getActivity(this, 1, call,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent silentIntent = new Intent(this, NotificationActionReceiver.class);
+        silentIntent.setAction(NotificationActionReceiver.ACTION_SILENT);
+        PendingIntent silentPi = PendingIntent.getBroadcast(this, 2, silentIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent denyIntent = new Intent(this, NotificationActionReceiver.class);
+        denyIntent.setAction(NotificationActionReceiver.ACTION_DENY);
+        PendingIntent denyPi = PendingIntent.getBroadcast(this, 3, denyIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (android.os.Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel("colink_call", "Agent calls",
@@ -95,6 +108,15 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
                 .setCategory(Notification.CATEGORY_CALL)
                 .setFullScreenIntent(fullScreenPi, true)
                 .setAutoCancel(true)
+                .addAction(new Notification.Action.Builder(
+                        android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_send),
+                        "Approve", approvePi).build())
+                .addAction(new Notification.Action.Builder(
+                        android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                        "Silent", silentPi).build())
+                .addAction(new Notification.Action.Builder(
+                        android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        "Deny", denyPi).build())
                 .build();
 
         nm.notify(1, n);

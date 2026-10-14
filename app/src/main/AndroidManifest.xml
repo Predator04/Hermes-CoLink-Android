@@ -73,6 +73,11 @@
             </intent-filter>
         </service>
 
+        <!-- Notification action buttons (Silent / Deny) -->
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false" />
+
         <!-- Telecom connection — rings like a real incoming call -->
         <service
             android:name=".ColinkCallService"
