@@ -75,6 +75,16 @@ public class CallActivity extends Activity {
         });
         root.addView(accept);
 
+        Button silent = new Button(this);
+        silent.setText("🔕 Silent");
+        silent.setOnClickListener(v -> {
+            try {
+                android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                nm.cancel(1);
+            } catch (Exception ignored) { }
+        });
+        root.addView(silent);
+
         Button decline = new Button(this);
         decline.setText(fcm ? "Dismiss" : "Decline");
         decline.setOnClickListener(v -> {
