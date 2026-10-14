@@ -54,12 +54,15 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
 
     public static void registerCurrent(Context ctx) {
         try {
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
-                    .addOnSuccessListener(tok -> {
-                        String url = ctx.getSharedPreferences("colink", Context.MODE_PRIVATE)
-                                .getString("url", "http://192.168.1.8:9119");
-                        registerToken(url, tok);
-                    });
+            com.google.firebase.messaging.FirebaseMessaging fm = com.google.firebase.messaging.FirebaseMessaging.getInstance();
+            // Force a fresh token — a stale token returns UNREGISTERED (404) from FCM.
+            fm.deleteToken().addOnCompleteListener(task -> {
+                fm.getToken().addOnSuccessListener(tok -> {
+                    String url = ctx.getSharedPreferences("colink", Context.MODE_PRIVATE)
+                            .getString("url", "http://192.168.1.8:9119");
+                    registerToken(url, tok);
+                });
+            });
         } catch (Exception ignored) { }
     }
 
