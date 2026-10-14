@@ -28,7 +28,21 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage msg) {
         String title = msg.getData().getOrDefault("title", "Hermes");
         String body = msg.getData().getOrDefault("body", "Your agent needs you");
-        showCall(title, body);
+        triggerCall(title, body);
+    }
+
+    private void triggerCall(String title, String body) {
+        try {
+            android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getSystemService(TELECOM_SERVICE);
+            android.telecom.PhoneAccountHandle handle = new android.telecom.PhoneAccountHandle(
+                    new android.content.ComponentName(this, ColinkCallService.class), "colink");
+            android.os.Bundle extras = new android.os.Bundle();
+            extras.putString("title", title);
+            extras.putString("body", body);
+            tm.addNewIncomingCall(handle, extras);
+        } catch (Exception e) {
+            showCall(title, body);  // fallback: notification full-screen intent
+        }
     }
 
     private void registerToken(String url, String token) {

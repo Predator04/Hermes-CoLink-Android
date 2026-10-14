@@ -46,6 +46,22 @@ public class MainActivity extends Activity {
         }
         buildLogin();
         checkFullScreenPermission();
+        registerPhoneAccount();
+    }
+
+    private void registerPhoneAccount() {
+        try {
+            android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getSystemService(TELECOM_SERVICE);
+            android.telecom.PhoneAccountHandle handle = new android.telecom.PhoneAccountHandle(
+                    new android.content.ComponentName(this, ColinkCallService.class), "colink");
+            if (tm.getPhoneAccount(handle) == null) {
+                android.telecom.PhoneAccount account = new android.telecom.PhoneAccount.Builder(handle, "CoLink")
+                        .setCapabilities(android.telecom.PhoneAccount.CAPABILITY_SELF_MANAGED)
+                        .addSupportedUriScheme("tel")
+                        .build();
+                tm.registerPhoneAccount(account);
+            }
+        } catch (Exception ignored) { }
     }
 
     private void checkFullScreenPermission() {
