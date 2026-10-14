@@ -61,11 +61,24 @@ public class MainActivity extends Activity {
             new android.app.AlertDialog.Builder(this)
                     .setTitle("Enable full-screen calls")
                     .setMessage("So the agent can ring your phone like a call, allow CoLink full-screen notifications.")
-                    .setPositiveButton("Open settings", (d, w) -> startActivity(
-                            new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())))
+                    .setPositiveButton("Enable", (d, w) -> openFullScreenSetting())
                     .setNegativeButton("Later", null)
                     .show();
+        }
+    }
+
+    private void openFullScreenSetting() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                        Uri.fromParts("package", getPackageName(), null)));
+            } else {
+                startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName()));
+            }
+        } catch (Exception e) {
+            startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", getPackageName(), null)));
         }
     }
 
