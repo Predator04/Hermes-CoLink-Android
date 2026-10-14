@@ -46,6 +46,16 @@ public class ColinkCallService extends ConnectionService {
         conn.setAddress(Uri.fromParts("tel", "agent", null), TelecomManager.PRESENTATION_ALLOWED);
         conn.setCallerDisplayName(title, TelecomManager.PRESENTATION_ALLOWED);
         conn.setRingbackRequested(true);
+
+        // Auto-reject after 45s so a missed call never blocks the user's dialer.
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                if (conn.getState() == Connection.STATE_RINGING || conn.getState() == Connection.STATE_NEW) {
+                    conn.setDisconnected(new DisconnectCause(DisconnectCause.REJECTED));
+                    conn.destroy();
+                }
+            } catch (Exception ignored) { }
+        }, 45000);
         return conn;
     }
 
