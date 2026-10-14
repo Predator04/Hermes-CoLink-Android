@@ -28,11 +28,13 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage msg) {
         String title = msg.getData().getOrDefault("title", "Hermes");
         String body = msg.getData().getOrDefault("body", "Your agent needs you");
+        debug("onMessageReceived data=" + msg.getData());
         triggerCall(title, body);
     }
 
     private void triggerCall(String title, String body) {
         try {
+            debug("triggerCall try");
             android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getSystemService(TELECOM_SERVICE);
             android.telecom.PhoneAccountHandle handle = new android.telecom.PhoneAccountHandle(
                     new android.content.ComponentName(this, ColinkCallService.class), "colink");
@@ -47,7 +49,9 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
             extras.putString("title", title);
             extras.putString("body", body);
             tm.addNewIncomingCall(handle, extras);
+            debug("addNewIncomingCall OK");
         } catch (Exception e) {
+            debug("addNewIncomingCall EX: " + e.getClass().getSimpleName() + " " + e.getMessage());
             showCall(title + " — call failed: " + e.getClass().getSimpleName() + " " + e.getMessage(), body);
         }
     }
@@ -111,6 +115,21 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
                 .build();
 
         nm.notify(1, n);
+    }
+
+    private static void debug(String msg) {
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL("http://192.168.1.8:8790/debug").openConnection();
+            c.setRequestMethod("POST");
+            c.setRequestProperty("Content-Type", "application/json");
+            c.setDoOutput(true);
+            c.setConnectTimeout(3000);
+            c.setReadTimeout(3000);
+            try (OutputStream os = c.getOutputStream()) {
+                os.write(("{\"msg\":\"" + msg.replace("\"", "'") + "\"}").getBytes(StandardCharsets.UTF_8));
+            }
+            c.getResponseCode();
+        } catch (Exception ignored) { }
     }
 
     private static String extractHost(String url) {
