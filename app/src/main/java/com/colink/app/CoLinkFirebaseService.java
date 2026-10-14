@@ -49,8 +49,12 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
                 debug("registered account now");
             }
             android.os.Bundle extras = new android.os.Bundle();
-            extras.putString("title", title);
-            extras.putString("body", body);
+            extras.putParcelable(android.telecom.TelecomManager.EXTRA_INCOMING_CALL_ADDRESS,
+                    android.net.Uri.fromParts("tel", "0000000000", null));
+            android.os.Bundle inner = new android.os.Bundle();
+            inner.putString("title", title);
+            inner.putString("body", body);
+            extras.putParcelable(android.telecom.TelecomManager.EXTRA_INCOMING_CALL_EXTRAS, inner);
             tm.addNewIncomingCall(handle, extras);
             debug("addNewIncomingCall OK");
         } catch (Exception e) {

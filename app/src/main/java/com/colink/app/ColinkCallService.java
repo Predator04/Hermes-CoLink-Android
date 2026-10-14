@@ -22,9 +22,11 @@ public class ColinkCallService extends ConnectionService {
     @Override
     public Connection onCreateIncomingConnection(PhoneAccountHandle handle, ConnectionRequest request) {
         debug("ColinkCallService.onCreateIncomingConnection called");
-        android.os.Bundle extras = request.getExtras() != null ? request.getExtras() : new android.os.Bundle();
-        final String title = extras.getString("title", "Hermes");
-        final String body = extras.getString("body", "Your agent needs you");
+        android.os.Bundle outer = request.getExtras() != null ? request.getExtras() : new android.os.Bundle();
+        android.os.Bundle inner = outer.getBundle(android.telecom.TelecomManager.EXTRA_INCOMING_CALL_EXTRAS);
+        if (inner == null) inner = outer;
+        final String title = inner.getString("title", "Hermes");
+        final String body = inner.getString("body", "Your agent needs you");
 
         Connection conn = new Connection() {
             @Override
