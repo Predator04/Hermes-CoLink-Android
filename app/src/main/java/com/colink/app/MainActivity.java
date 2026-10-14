@@ -42,15 +42,31 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         prefs = getSharedPreferences("colink", MODE_PRIVATE);
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
-        }
+        requestRuntimePermissions();
         buildLogin();
         checkFullScreenPermission();
         registerPhoneAccount();
         // Auto-connect when credentials are remembered — land on Sessions, not the login screen.
         if (prefs.contains("password") && prefs.contains("username")) {
             doLogin();
+        }
+    }
+
+    private void requestRuntimePermissions() {
+        java.util.List<String> perms = new java.util.ArrayList<>();
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            perms.add(android.Manifest.permission.POST_NOTIFICATIONS);
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(android.Manifest.permission.READ_PHONE_NUMBERS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                perms.add(android.Manifest.permission.READ_PHONE_NUMBERS);
+            }
+            if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                perms.add(android.Manifest.permission.READ_PHONE_STATE);
+            }
+        }
+        if (!perms.isEmpty()) {
+            requestPermissions(perms.toArray(new String[0]), 1);
         }
     }
 
