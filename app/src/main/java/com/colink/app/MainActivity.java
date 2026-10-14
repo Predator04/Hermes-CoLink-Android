@@ -452,13 +452,13 @@ public class MainActivity extends Activity {
         header.setText("Sessions");
         header.setTextSize(22);
         header.setTextColor(Color.WHITE);
-        headerRow.addView(header, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        headerRow.addView(header);
         Button kanban = new Button(this);
-        kanban.setText("📋 Kanban");
+        kanban.setText("📋");
         kanban.setOnClickListener(v -> startActivity(new Intent(this, KanbanActivity.class).putExtra("url", url)));
         headerRow.addView(kanban);
         Button model = new Button(this);
-        model.setText("⚙️ Model");
+        model.setText("⚙️");
         model.setOnClickListener(v -> startActivity(new Intent(this, ModelActivity.class).putExtra("url", url)));
         headerRow.addView(model);
         Button auto = new Button(this);
@@ -469,7 +469,10 @@ public class MainActivity extends Activity {
         settings.setText("🔧");
         settings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         headerRow.addView(settings);
-        root.addView(headerRow);
+        android.widget.HorizontalScrollView headerScroll = new android.widget.HorizontalScrollView(this);
+        headerScroll.setHorizontalScrollBarEnabled(false);
+        headerScroll.addView(headerRow);
+        root.addView(headerScroll, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         List<Session> visible = new ArrayList<>();
         for (Session s : sessions) {
