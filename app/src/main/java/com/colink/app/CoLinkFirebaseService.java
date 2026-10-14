@@ -34,32 +34,18 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
 
     private void triggerCall(String title, String body) {
         try {
-            debug("triggerCall try");
-            android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getSystemService(TELECOM_SERVICE);
-            android.telecom.PhoneAccountHandle handle = new android.telecom.PhoneAccountHandle(
-                    new android.content.ComponentName(this, ColinkCallService.class), "colink");
-            android.telecom.PhoneAccount existing = tm.getPhoneAccount(handle);
-            debug("account registered before: " + (existing != null) + (existing != null ? " caps=" + existing.getCapabilities() : ""));
-            if (existing == null) {
-                android.telecom.PhoneAccount account = new android.telecom.PhoneAccount.Builder(handle, "CoLink")
-                        .setCapabilities(android.telecom.PhoneAccount.CAPABILITY_SELF_MANAGED)
-                        .addSupportedUriScheme("tel")
-                        .build();
-                tm.registerPhoneAccount(account);
-                debug("registered account now");
-            }
-            android.os.Bundle extras = new android.os.Bundle();
-            extras.putParcelable(android.telecom.TelecomManager.EXTRA_INCOMING_CALL_ADDRESS,
-                    android.net.Uri.fromParts("tel", "0000000000", null));
-            android.os.Bundle inner = new android.os.Bundle();
-            inner.putString("title", title);
-            inner.putString("body", body);
-            extras.putParcelable(android.telecom.TelecomManager.EXTRA_INCOMING_CALL_EXTRAS, inner);
-            tm.addNewIncomingCall(handle, extras);
-            debug("addNewIncomingCall OK");
+            // Ensure the foreground service is running (grants the background-activity-launch exemption).
+            startForegroundService(new Intent(this, CoLinkService.class));
+            // Launch the full-screen call UI directly.
+            Intent call = new Intent(this, CallActivity.class);
+            call.putExtra("title", title);
+            call.putExtra("body", body);
+            call.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(call);
+            debug("startActivity CallActivity OK");
         } catch (Exception e) {
-            debug("addNewIncomingCall EX: " + e.getClass().getSimpleName() + " " + e.getMessage());
-            showCall(title + " — call failed: " + e.getClass().getSimpleName() + " " + e.getMessage(), body);
+            debug("startActivity EX: " + e.getClass().getSimpleName() + " " + e.getMessage());
+            showCall(title, body);
         }
     }
 
