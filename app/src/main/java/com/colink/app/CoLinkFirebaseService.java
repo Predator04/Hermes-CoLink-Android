@@ -38,12 +38,15 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
             android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getSystemService(TELECOM_SERVICE);
             android.telecom.PhoneAccountHandle handle = new android.telecom.PhoneAccountHandle(
                     new android.content.ComponentName(this, ColinkCallService.class), "colink");
-            if (tm.getPhoneAccount(handle) == null) {
+            android.telecom.PhoneAccount existing = tm.getPhoneAccount(handle);
+            debug("account registered before: " + (existing != null) + (existing != null ? " caps=" + existing.getCapabilities() : ""));
+            if (existing == null) {
                 android.telecom.PhoneAccount account = new android.telecom.PhoneAccount.Builder(handle, "CoLink")
                         .setCapabilities(android.telecom.PhoneAccount.CAPABILITY_SELF_MANAGED)
                         .addSupportedUriScheme("tel")
                         .build();
                 tm.registerPhoneAccount(account);
+                debug("registered account now");
             }
             android.os.Bundle extras = new android.os.Bundle();
             extras.putString("title", title);
