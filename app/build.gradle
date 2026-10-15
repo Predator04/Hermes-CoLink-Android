@@ -17,8 +17,8 @@ android {
         applicationId "com.colink.app"
         minSdk 26
         targetSdk 34
-        versionCode 43
-        versionName "0.11.3"
+        versionCode 44
+        versionName "0.11.4"
     }
 
     signingConfigs {
