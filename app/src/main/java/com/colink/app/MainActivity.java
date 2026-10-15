@@ -249,6 +249,8 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
+    private TextView updateStatus;
+
     private void buildLogin() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -322,7 +324,47 @@ public class MainActivity extends Activity {
         status.setPadding(0, 24, 0, 0);
         root.addView(status);
 
+        updateStatus = new TextView(this);
+        updateStatus.setTextColor(Color.rgb(255, 200, 0));
+        updateStatus.setTextSize(14);
+        updateStatus.setGravity(Gravity.CENTER);
+        updateStatus.setPadding(0, 12, 0, 0);
+        updateStatus.setOnClickListener(v -> checkForUpdate(true));
+        root.addView(updateStatus);
+
         setContentView(root);
+
+        checkForUpdateQuiet();
+    }
+
+    private void checkForUpdateQuiet() {
+        long last = prefs.getLong("update_check_at", 0);
+        if (System.currentTimeMillis() - last < 30 * 60 * 1000L) {
+            String cached = prefs.getString("update_status", "");
+            if (updateStatus != null && !cached.isEmpty()) updateStatus.setText(cached);
+            return;
+        }
+        new Thread(() -> {
+            String msg = "";
+            try {
+                java.net.URL u = new java.net.URL("https://api.github.com/repos/Predator04/Hermes-CoLink-Android/releases/latest");
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) u.openConnection();
+                c.setRequestProperty("User-Agent", "CoLink");
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(8000);
+                java.io.InputStream in = c.getInputStream();
+                String json = new java.util.Scanner(in, "UTF-8").useDelimiter("\\A").next();
+                in.close();
+                org.json.JSONObject o = new org.json.JSONObject(json);
+                String tag = o.optString("tag_name", "");
+                if (!tag.isEmpty() && isNewer(tag, BuildConfig.VERSION_NAME)) {
+                    msg = "⬆ New version available: " + tag + " — tap to update";
+                }
+            } catch (Exception ignored) { }
+            final String fmsg = msg;
+            prefs.edit().putLong("update_check_at", System.currentTimeMillis()).putString("update_status", fmsg).apply();
+            ui.post(() -> { if (updateStatus != null) updateStatus.setText(fmsg); });
+        }).start();
     }
 
     private boolean isOnline() {
