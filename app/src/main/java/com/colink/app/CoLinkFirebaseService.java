@@ -33,6 +33,16 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
         String method = d.getOrDefault("method", "");
         String params = d.getOrDefault("params", "");
         debug("onMessageReceived req=" + reqId + " method=" + method);
+        boolean isApproval = "approval".equals(method);
+        android.content.SharedPreferences prefs = getSharedPreferences("colink", MODE_PRIVATE);
+        if (isApproval && !prefs.getBoolean("notify_approval", true)) {
+            debug("approval notifications disabled — dropping");
+            return;
+        }
+        if (!isApproval && !method.isEmpty() && !prefs.getBoolean("notify_question", true)) {
+            debug("question notifications disabled — dropping");
+            return;
+        }
         showCall(title, body, reqId, method, params);
         if (!reqId.isEmpty()) CoLinkService.ensureRunning(this);
     }

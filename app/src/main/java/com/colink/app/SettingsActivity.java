@@ -55,6 +55,31 @@ public class SettingsActivity extends Activity {
         vibrate.setOnCheckedChangeListener((v, checked) -> prefs.edit().putBoolean("vibrate", checked).apply());
         root.addView(vibrate);
 
+        TextView notifyHeader = new TextView(this);
+        notifyHeader.setText("Notifications");
+        notifyHeader.setTextSize(14);
+        notifyHeader.setTextColor(Color.GRAY);
+        notifyHeader.setPadding(0, 28, 0, 0);
+        root.addView(notifyHeader);
+
+        CheckBox notifyApproval = new CheckBox(this);
+        notifyApproval.setText("Approval requests");
+        notifyApproval.setTextSize(16);
+        notifyApproval.setTextColor(Color.WHITE);
+        notifyApproval.setPadding(0, 12, 0, 0);
+        notifyApproval.setChecked(prefs.getBoolean("notify_approval", true));
+        notifyApproval.setOnCheckedChangeListener((v, checked) -> prefs.edit().putBoolean("notify_approval", checked).apply());
+        root.addView(notifyApproval);
+
+        CheckBox notifyQuestion = new CheckBox(this);
+        notifyQuestion.setText("Questions");
+        notifyQuestion.setTextSize(16);
+        notifyQuestion.setTextColor(Color.WHITE);
+        notifyQuestion.setPadding(0, 12, 0, 0);
+        notifyQuestion.setChecked(prefs.getBoolean("notify_question", true));
+        notifyQuestion.setOnCheckedChangeListener((v, checked) -> prefs.edit().putBoolean("notify_question", checked).apply());
+        root.addView(notifyQuestion);
+
         Button battery = new Button(this);
         battery.setText("🔋 Disable battery optimization");
         battery.setOnClickListener(v -> {
