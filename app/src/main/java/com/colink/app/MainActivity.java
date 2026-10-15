@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        CallRingtone.stop(); // opening the app silences any lingering ring
         prefs = getSharedPreferences("colink", MODE_PRIVATE);
         requestRuntimePermissions();
         buildLogin();

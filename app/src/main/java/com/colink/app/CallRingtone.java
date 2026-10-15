@@ -5,10 +5,16 @@ import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 
-/** Explicitly plays/stops the call ringtone so "Silent" can actually stop it. */
+/** Explicitly plays/stops the call ringtone so "Silent" can actually stop it.
+ *  Auto-stops after 60s so a missed call can never ring forever. */
 public class CallRingtone {
+    private static final long AUTO_STOP_MS = 60_000L;
     private static Ringtone ringtone;
+    private static final Handler h = new Handler(Looper.getMainLooper());
+    private static final Runnable stopRunnable = CallRingtone::stop;
 
     public static void start(Context c) {
         stop();
@@ -26,11 +32,13 @@ public class CallRingtone {
                         .build());
                 ringtone.setLooping(true);
                 ringtone.play();
+                h.postDelayed(stopRunnable, AUTO_STOP_MS); // never ring forever
             }
         } catch (Exception ignored) { }
     }
 
     public static void stop() {
+        h.removeCallbacks(stopRunnable);
         try {
             if (ringtone != null) {
                 ringtone.stop();

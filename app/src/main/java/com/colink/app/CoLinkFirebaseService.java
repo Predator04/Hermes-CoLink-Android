@@ -133,6 +133,7 @@ public class CoLinkFirebaseService extends FirebaseMessagingService {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setCategory(Notification.CATEGORY_CALL)
                 .setFullScreenIntent(fullScreenPi, true)
+                .setContentIntent(fullScreenPi)
                 .setAutoCancel(true);
         if (approvePi != null) {
             nb.addAction(new Notification.Action.Builder(
